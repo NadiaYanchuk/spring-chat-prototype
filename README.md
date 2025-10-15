@@ -16,8 +16,8 @@
 ### 1. Клонирование репозитория
 
 ```bash
-git clone <repository-url>
-cd demo
+git clone https://github.com/NadiaYanchuk/spring-chat-prototype.git
+cd spring-chat-prototype
 ```
 
 ### 2. Сборка проекта
@@ -33,7 +33,6 @@ cd demo
 ```
 
 Приложение будет доступно по адресу: `http://localhost:8080`
-
 
 ## Архитектура проекта
 
