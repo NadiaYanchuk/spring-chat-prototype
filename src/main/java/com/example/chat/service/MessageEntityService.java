@@ -19,19 +19,19 @@ import java.util.List;
 @Slf4j
 @Transactional
 public class MessageEntityService {
-    
+
     private final MessageEntityRepository messageRepository;
-    
+
     public MessageEntity sendMessage(RoomEntity room, UserEntity user, String text) {
         log.info("Sending message from user {} to room {}", user.getUsername(), room.getName());
-        
+
         MessageEntity message = new MessageEntity(room, user, text);
         MessageEntity savedMessage = messageRepository.save(message);
-        
+
         log.info("Message sent with ID: {}", savedMessage.getId());
         return savedMessage;
     }
-    
+
     public MessageEntity sendSystemMessage(RoomEntity room, UserEntity user, String text, MessageEntity.MessageType messageType) {
         log.info("Sending system message type {} from user {} to room {}", messageType, user.getUsername(), room.getName());
         

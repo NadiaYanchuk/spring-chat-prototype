@@ -1,5 +1,6 @@
 package com.example.chat.controller;
 
+import com.example.chat.dto.MessageDTO;
 import com.example.chat.entity.MessageEntity;
 import com.example.chat.entity.RoomEntity;
 import com.example.chat.entity.UserEntity;
@@ -73,7 +74,7 @@ public class ChatEntityController {
         RoomEntity room = roomService.createPublicRoom(request.getName(), creator);
         return ResponseEntity.ok(room);
     }
-    
+
     @PostMapping("/rooms/private")
     public ResponseEntity<RoomEntity> createPrivateRoom(@RequestBody CreatePrivateRoomRequest request) {
         UserEntity user1 = userService.findById(request.getUser1Id());
@@ -88,7 +89,7 @@ public class ChatEntityController {
         RoomEntity room = roomService.createGroupRoom(request.getName(), creator);
         return ResponseEntity.ok(room);
     }
-    
+
     @GetMapping("/rooms")
     public ResponseEntity<List<RoomEntity>> getAllRooms() {
         return ResponseEntity.ok(roomService.getAllRooms());
@@ -98,7 +99,7 @@ public class ChatEntityController {
     public ResponseEntity<List<RoomEntity>> getPublicRooms() {
         return ResponseEntity.ok(roomService.getActivePublicRooms());
     }
-    
+
     @GetMapping("/rooms/{id}")
     public ResponseEntity<RoomEntity> getRoom(@PathVariable Long id) {
         RoomEntity room = roomService.findById(id);
@@ -112,36 +113,40 @@ public class ChatEntityController {
     }
 
     // === MESSAGE ENDPOINTS ===
-    
     @PostMapping("/messages")
-    public ResponseEntity<MessageEntity> sendMessage(@RequestBody SendMessageRequest request) {
+    public ResponseEntity<String> sendMessage(@RequestBody SendMessageRequest request) {
         RoomEntity room = roomService.findById(request.getRoomId());
         UserEntity user = userService.findById(request.getUserId());
         MessageEntity message = messageService.sendMessage(room, user, request.getText());
-        return ResponseEntity.ok(message);
+        return ResponseEntity.ok("Send");
     }
-    
+
     @GetMapping("/messages/room/{roomId}")
-    public ResponseEntity<List<MessageEntity>> getRoomMessages(@PathVariable Long roomId,
-                                                              @RequestParam(defaultValue = "0") int page,
-                                                              @RequestParam(defaultValue = "50") int size) {
+    public ResponseEntity<List<MessageDTO>> getRoomMessages(@PathVariable Long roomId,
+                                                            @RequestParam(defaultValue = "0") int page,
+                                                            @RequestParam(defaultValue = "50") int size) {
         RoomEntity room = roomService.findById(roomId);
         Page<MessageEntity> messages = messageService.getMessagesInRoom(room, PageRequest.of(page, size));
-        return ResponseEntity.ok(messages.getContent());
+
+        List<MessageDTO> result = messages.getContent().stream()
+                .map(com.example.chat.dto.MessageDTO::from)
+                .toList();
+
+        return ResponseEntity.ok(result);
     }
-    
+
     @GetMapping("/messages/room/{roomId}/recent")
     public ResponseEntity<List<MessageEntity>> getRecentRoomMessages(@PathVariable Long roomId) {
         RoomEntity room = roomService.findById(roomId);
         return ResponseEntity.ok(messageService.getRecentMessagesInRoom(room));
     }
-    
+
     @GetMapping("/messages/user/{userId}")
     public ResponseEntity<List<MessageEntity>> getUserMessages(@PathVariable Long userId) {
         UserEntity user = userService.findById(userId);
         return ResponseEntity.ok(messageService.getUserMessages(user));
     }
-    
+
     @PutMapping("/messages/{messageId}")
     public ResponseEntity<MessageEntity> editMessage(@PathVariable Long messageId,
                                                      @RequestBody EditMessageRequest request) {
@@ -149,7 +154,7 @@ public class ChatEntityController {
         MessageEntity message = messageService.editMessage(messageId, request.getNewText(), editor);
         return ResponseEntity.ok(message);
     }
-    
+
     @DeleteMapping("/messages/{messageId}")
     public ResponseEntity<Void> deleteMessage(@PathVariable Long messageId,
                                              @RequestParam Long deleterId) {
@@ -157,14 +162,13 @@ public class ChatEntityController {
         messageService.deleteMessage(messageId, deleter);
         return ResponseEntity.ok().build();
     }
-    
+
     @GetMapping("/messages/search")
     public ResponseEntity<List<MessageEntity>> searchMessages(@RequestParam String text) {
         return ResponseEntity.ok(messageService.searchMessages(text));
     }
 
     // === STATISTICS ENDPOINTS ===
-    
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStatistics() {
         return ResponseEntity.ok(Map.of(

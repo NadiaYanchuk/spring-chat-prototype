@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "messages")
 public class MessageEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -39,14 +39,14 @@ public class MessageEntity {
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type")
     private MessageType messageType;
-    
+
     @Column(name = "is_edited")
     private Boolean isEdited = false;
-    
+
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 

@@ -32,72 +32,72 @@ public class RoomEntityService {
         log.info("Public room created with ID: {}", savedRoom.getId());
         return savedRoom;
     }
-    
+
     public RoomEntity createPrivateRoom(UserEntity user1, UserEntity user2) {
         log.info("Creating private room between {} and {}", user1.getUsername(), user2.getUsername());
-        
+
         // Проверяем, существует ли уже приватная комната между этими пользователями
         Optional<RoomEntity> existingRoom = roomRepository.findPrivateRoomBetweenUsers(user1, user2);
         if (existingRoom.isPresent()) {
             log.info("Private room already exists between users");
             return existingRoom.get();
         }
-        
+
         String roomName = "Private: " + user1.getUsername() + " & " + user2.getUsername();
         RoomEntity room = new RoomEntity(roomName, user1, user2);
         RoomEntity savedRoom = roomRepository.save(room);
-        
+
         log.info("Private room created with ID: {}", savedRoom.getId());
         return savedRoom;
     }
-    
+
     public RoomEntity createGroupRoom(String roomName, UserEntity creator) {
         log.info("Creating group room '{}' by user {}", roomName, creator.getUsername());
-        
+
         if (roomRepository.existsByName(roomName)) {
             throw new IllegalArgumentException("Room with name '" + roomName + "' already exists");
         }
-        
+
         RoomEntity room = new RoomEntity(roomName, RoomEntity.RoomType.GROUP, creator);
         RoomEntity savedRoom = roomRepository.save(room);
-        
+
         log.info("Group room created with ID: {}", savedRoom.getId());
         return savedRoom;
     }
-    
+
     public Optional<RoomEntity> findByName(String roomName) {
         return roomRepository.findByName(roomName);
     }
-    
+
     public RoomEntity findById(Long id) {
         return roomRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found with ID: " + id));
     }
-    
+
     public List<RoomEntity> getActivePublicRooms() {
         return roomRepository.findActivePublicRooms();
     }
-    
+
     public List<RoomEntity> getUserRooms(UserEntity user) {
         return roomRepository.findUserRooms(user);
     }
-    
+
     public List<RoomEntity> getRoomsByType(RoomEntity.RoomType roomType) {
         return roomRepository.findByRoomType(roomType);
     }
-    
+
     public List<RoomEntity> getActiveRooms() {
         return roomRepository.findByIsActiveTrue();
     }
-    
+
     public List<RoomEntity> getRoomsByCreator(UserEntity creator) {
         return roomRepository.findByCreator(creator);
     }
-    
+
     public Optional<RoomEntity> findPrivateRoomBetweenUsers(UserEntity user1, UserEntity user2) {
         return roomRepository.findPrivateRoomBetweenUsers(user1, user2);
     }
-    
+
     public long getMessageCountInRoom(RoomEntity room) {
         return roomRepository.countMessagesInRoom(room);
     }
