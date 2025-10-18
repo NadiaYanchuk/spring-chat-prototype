@@ -29,7 +29,7 @@ public class ChatEntityController {
 
     // === USER ENDPOINTS ===
     
-    @PostMapping("/users")
+    @PostMapping("/users/register")
     public ResponseEntity<UserEntity> createUser(@Valid @RequestBody CreateUserRequest request) {
         UserEntity user = userService.createUser(request.getUsername(), request.getPassword(), request.getEmail());
         return ResponseEntity.ok(user);

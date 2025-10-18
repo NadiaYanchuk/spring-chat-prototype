@@ -1,10 +1,19 @@
 package com.example.chat.config;
 
+import com.example.chat.entity.UserEntity;
+import com.example.chat.repository.UserEntityRepository;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -13,10 +22,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
+@AllArgsConstructor
 public class SecurityConfig {
+    private final UserEntityRepository userDAO;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -29,16 +41,21 @@ public class SecurityConfig {
             
             // Настраиваем авторизацию
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/ws/**").permitAll()  // WebSocket endpoint
-                .requestMatchers("/api/chat/**").permitAll()  // Chat API
-                .requestMatchers("/api/v2/**").permitAll()  // New Entity API
-                .requestMatchers("/api/users/**").permitAll()  // Users API  
-                .requestMatchers("/h2-console/**").permitAll()  // H2 console для разработки
-                .requestMatchers("/actuator/**").permitAll()  // Actuator endpoints
+                .requestMatchers("/api/v2/users/register").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )
-            
-            // Настраиваем заголовки безопасности
+            .formLogin(form -> form
+                    .loginPage("/api/v2/users/login")
+                    .loginProcessingUrl("/api/v2/users/login")
+                    .usernameParameter("username")
+                    .passwordParameter("password")
+                    .successHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+                    .failureHandler((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid credentials"))
+                    .permitAll()
+            )
+
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())  // Для H2 console
             );
@@ -63,5 +80,18 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        final UserDetailsService userDetailsService = username -> {
+            final UserEntity user = userDAO.findByUsername(username).orElseThrow();
+            final GrantedAuthority userAuthority = new SimpleGrantedAuthority("USER");
+            return new User(user.getUsername(), user.getPassword(), Collections.singletonList(userAuthority));
+        };
+        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
+        daoAuthenticationProvider.setUserDetailsService(userDetailsService);
+        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder());
+        return daoAuthenticationProvider;
     }
 }
