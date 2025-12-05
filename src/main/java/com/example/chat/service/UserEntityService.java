@@ -4,6 +4,7 @@ import com.example.chat.dto.UserDTO;
 import com.example.chat.entity.UserEntity;
 import com.example.chat.repository.UserEntityRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class UserEntityService {
 
     private final UserEntityRepository userDao;
@@ -18,8 +20,10 @@ public class UserEntityService {
     private final PasswordEncoder passwordEncoder;
 
     public void addUser(final UserEntity user) {
+        log.info("Adding new user: {}", user.getUsername());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userDao.save(user);
+        log.info("User successfully added: {}", user.getUsername());
     }
 
     public List<UserDTO> findAllWithoutPrincipal(String username) {
@@ -32,11 +36,20 @@ public class UserEntityService {
     }
 
     public UserEntity findByUsername(String username) {
-        return userDao.findByUsername(username);
+        UserEntity user = userDao.findByUsername(username);
+        if (user == null) {
+            log.error("User not found with username: {}", username);
+            throw new IllegalArgumentException("User not found with username: " + username);
+        }
+        return user;
     }
 
     public UserEntity findById(Long id) {
-        return userDao.findById(id).orElse(null);
+        return userDao.findById(id)
+                .orElseThrow(() -> {
+                    log.error("User not found with id: {}", id);
+                    return new IllegalArgumentException("User not found with id: " + id);
+                });
     }
 
     public List<UserDTO> findUsersWithoutRoomByUser(String name, String searchTerm) {

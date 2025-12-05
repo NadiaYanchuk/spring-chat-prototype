@@ -38,7 +38,6 @@ public class RoomEntityService {
 
         RoomEntity room = roomDAO.findByUser1_IdAndUser2_Id(user1Id, user2Id);
 
-        // Проверяем наличие комнаты с зеркальным сходством идентификаторов пользователей
         if (room != null) {
             return room;
         }
@@ -54,11 +53,19 @@ public class RoomEntityService {
     }
 
     public RoomEntity findByUsersUsernames(String user1, String user2) {
-        return roomDAO.findByUser1UsernameAndUser2UsernameOrUser2UsernameAndUser1Username(user1, user2);
+        RoomEntity room = roomDAO.findByUser1UsernameAndUser2UsernameOrUser2UsernameAndUser1Username(user1, user2);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found for users: " + user1 + " and " + user2);
+        }
+        return room;
     }
 
     public RoomEntity findByUsersIds(Long user1, Long user2) {
-        return roomDAO.findByUser1IdAndUser2IdOrUser2IdAndUser1Id(user1, user2);
+        RoomEntity room = roomDAO.findByUser1IdAndUser2IdOrUser2IdAndUser1Id(user1, user2);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found for user IDs: " + user1 + " and " + user2);
+        }
+        return room;
     }
 
     public List<RoomDTO> findRoomsByUser(String userName) {

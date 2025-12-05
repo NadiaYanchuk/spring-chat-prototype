@@ -37,7 +37,7 @@ public class MessageEntityService {
     public List<MessageEntity> findMessagesByUsersId(Long currentUser, Long recipient) {
         return messageEntDao.findMessagesByUsersId(currentUser, recipient);
     }
-    @jakarta.transaction.Transactional
+
     public void deleteByTimestamp(Long time) {
         messageEntDao.deleteByTimestamp(new Timestamp(time));
     }

@@ -21,14 +21,22 @@ public interface MessageEntityRepository extends JpaRepository<MessageEntity, Lo
             "AND (m.user = :user OR m.room.user1 = :user OR m.room.user2 = :user)")
     List<MessageEntity> findMessagesByRoomAndUser(@Param("roomId") Long roomId, @Param("user") UserEntity user);
 
-    @Query("SELECT m FROM MessageEntity m JOIN m.room r " +
+    @Query("SELECT m FROM MessageEntity m " +
+            "JOIN FETCH m.room r " +
+            "JOIN FETCH m.user u " +
+            "JOIN FETCH r.user1 " +
+            "JOIN FETCH r.user2 " +
             "WHERE ((r.user1.username = :currentUser AND r.user2.username = :recipient) OR " +
             "(r.user1.username = :recipient AND r.user2.username = :currentUser)) " +
             "AND (m.user.username = :currentUser OR m.user.username = :recipient) " +
             "ORDER BY m.timestamp ASC")
     List<MessageEntity> findMessagesByUsersNames(@Param("currentUser") String currentUser, @Param("recipient") String recipient);
 
-    @Query("SELECT m FROM MessageEntity m JOIN m.room r " +
+    @Query("SELECT m FROM MessageEntity m " +
+            "JOIN FETCH m.room r " +
+            "JOIN FETCH m.user u " +
+            "JOIN FETCH r.user1 " +
+            "JOIN FETCH r.user2 " +
             "WHERE ((r.user1.id = :currentUser AND r.user2.id = :recipient) OR " +
             "(r.user1.id = :recipient AND r.user2.id = :currentUser)) " +
             "AND (m.user.id = :currentUser OR m.user.id = :recipient) " +
@@ -37,5 +45,11 @@ public interface MessageEntityRepository extends JpaRepository<MessageEntity, Lo
 
     void deleteByTimestamp(Timestamp timestamp);
 
-    MessageEntity findByTimestamp(Timestamp timestamp);
+    @Query("SELECT m FROM MessageEntity m " +
+            "JOIN FETCH m.room r " +
+            "JOIN FETCH m.user " +
+            "JOIN FETCH r.user1 " +
+            "JOIN FETCH r.user2 " +
+            "WHERE m.timestamp = :timestamp")
+    MessageEntity findByTimestamp(@Param("timestamp") Timestamp timestamp);
 }

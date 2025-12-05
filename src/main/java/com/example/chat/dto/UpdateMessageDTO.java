@@ -1,5 +1,7 @@
 package com.example.chat.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @AllArgsConstructor
@@ -8,6 +10,9 @@ import lombok.*;
 @Getter
 @ToString
 public class UpdateMessageDTO {
-    Long recipient;
-    String text;
+    @NotNull(message = "Recipient ID cannot be null")
+    private Long recipient;
+
+    @NotBlank(message = "Message text cannot be blank")
+    private String text;
 }

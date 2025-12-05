@@ -70,6 +70,9 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         return username -> {
             UserEntity user = userDAO.findByUsername(username);
+            if (user == null) {
+                throw new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: " + username);
+            }
             GrantedAuthority authority = new SimpleGrantedAuthority("USER");
             return new User(user.getUsername(), user.getPassword(), Collections.singletonList(authority));
         };
