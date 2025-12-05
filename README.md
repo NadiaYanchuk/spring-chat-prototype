@@ -1,15 +1,27 @@
-# Онлайн Чат - Прототип
+# Онлайн Чат
 
-Прототип системы онлайн чата на Spring Boot с поддержкой WebSocket для курса по Spring Framework.
+Веб-приложение чата в реальном времени на Spring Boot с поддержкой WebSocket, аутентификацией и базой данных H2, для курса по Spring Framework.
 
 ## Описание проекта
 
-Это веб-приложение реализует базовую функциональность чата в реальном времени с использованием технологий Spring Boot, WebSocket...
+Веб-приложение реализует функционал чата с:
+- Регистрацией и аутентификацией пользователей
+- Обменом сообщениями в реальном времени через WebSocket
+- Личными диалогами между пользователями
+- Управлением комнатами чата
+- Хранением истории сообщений в БД
 
-## Требования
+## Технологии
 
-- **Java 17** или выше
-- **Maven 3.6+** (используется Maven Wrapper)
+- **Java 21**
+- **Spring Boot 3.5.6**
+- **Spring Security** - аутентификация и авторизация
+- **Spring WebSocket** - коммуникация в реальном времени
+- **Spring Data JPA** - работа с базой данных
+- **H2 Database** - встроенная база данных
+- **Thymeleaf** - шаблонизатор для UI
+- **Lombok** - упрощение кода
+- **Maven** - система сборки
 
 ## Быстрый старт
 
@@ -20,19 +32,25 @@ git clone https://github.com/NadiaYanchuk/spring-chat-prototype.git
 cd spring-chat-prototype
 ```
 
-### 2. Сборка проекта
+### 2. Установка Maven (если не установлен)
 
 ```bash
-./mvnw clean compile
+sudo apt install maven -y
 ```
 
-### 3. Запуск приложения
+### 3. Сборка проекта
 
 ```bash
-./mvnw spring-boot:run
+mvn clean compile
 ```
 
-Приложение будет доступно по адресу: `http://localhost:8080`
+### 4. Запуск приложения
+
+```bash
+mvn spring-boot:run
+```
+
+Приложение будет доступно по адресу: **http://localhost:8080**
 
 ## Архитектура проекта
 
@@ -40,56 +58,99 @@ cd spring-chat-prototype
 src/
 ├── main/
 │   ├── java/com/example/chat/
-(допишем)
+│   │   ├── ChatApplication.java                   # Главный класс приложения
+│   │   ├── component/
+│   │   │   └── DatabaseInitializer.java           # Инициализация БД
+│   │   ├── config/
+│   │   │   ├── DataLoader.java                    # Загрузка тестовых данных
+│   │   │   ├── SecurityConfig.java                # Конфигурация безопасности
+│   │   │   └── WebSocketConfig.java               # Конфигурация WebSocket
+│   │   ├── constants/
+│   │   │   └── WebSocketDestinations.java         # Константы WebSocket топиков
+│   │   ├── controller/
+│   │   │   ├── AuthController.java                # Регистрация/вход
+│   │   │   ├── ChatController.java                # Основной контроллер чата
+│   │   │   ├── MessageEntController.java          # REST API для сообщений
+│   │   │   ├── RoomsController.java               # Управление комнатами
+│   │   │   └── UsersController.java               # Управление пользователями
+│   │   ├── dto/
+│   │   │   ├── DeleteMessageDTO.java              # DTO для удаления
+│   │   │   ├── MessageDTO.java                    # DTO сообщения
+│   │   │   ├── MessagesDataDTO.java               # DTO данных сообщения
+│   │   │   ├── RoomDTO.java                       # DTO комнаты
+│   │   │   ├── UpdateMessageDTO.java              # DTO для обновления
+│   │   │   └── UserDTO.java                       # DTO пользователя
+│   │   ├── entity/
+│   │   │   ├── MessageEntity.java                 # Сущность сообщения
+│   │   │   ├── RoomEntity.java                    # Сущность комнаты
+│   │   │   └── UserEntity.java                    # Сущность пользователя
+│   │   ├── exception/
+│   │   │   └── GlobalExceptionHandler.java        # Обработчик исключений
+│   │   ├── repository/
+│   │   │   ├── MessageEntityRepository.java       # Репозиторий сообщений
+│   │   │   ├── RoomEntityRepository.java          # Репозиторий комнат
+│   │   │   └── UserEntityRepository.java          # Репозиторий пользователей
+│   │   └── service/
+│   │       ├── MessageEntityService.java          # Сервис сообщений
+│   │       ├── RoomEntityService.java             # Сервис комнат
+│   │       └── UserEntityService.java             # Сервис пользователей
+│   └── resources/
+│       ├── application.properties                 # Конфигурация приложения
+│       ├── static/
+│       │   ├── img/                               # Изображения
+│       │   ├── js/                                # JavaScript файлы
+│       │   │   ├── chat.js                        # Логика чата
+│       │   │   └── custom.js                      # Дополнительная логика
+│       │   └── styles/
+│       │       └── style.css                      # Стили
+│       └── templates/
+│           ├── chat.html                          # Главная страница чата
+│           ├── login.html                         # Страница входа
+│           └── registration.html                  # Страница регистрации
+└── test/
+    └── java/com/example/chat/
+        └── ChatApplicationTests.java              # Тесты приложения
 ```
 
-## Основные компоненты
+## REST API Endpoints
 
-### WebSocket Configuration
-- **Endpoint**: `/ws` - точка подключения клиентов
-- **Message Broker**: Simple broker для топика `/topic`
-- **Application Prefix**: `/app` для маршрутизации сообщений
+### Аутентификация
+- `GET /login` - Страница входа
+- `POST /login` - Аутентификация
+- `GET /registration` - Страница регистрации
+- `POST /registration` - Создание аккаунта
+- `GET /logout` - Выход
 
-### Message Model
-```java
-public class Message {
-    private String from;  // Отправитель сообщения
-    private String text;  // Текст сообщения
-}
-```
+### Чат
+- `GET /chat` - Главная страница чата
+- `GET /getmessages?sender={id}&recipient={id}` - Получить историю сообщений
+- `PUT /updatemessage?timestamp={ts}` - Обновить сообщение
+- `DELETE /deletemessage` - Удалить сообщение
 
-### Запуск тестов
+### Пользователи
+- `GET /fetchallusers?searchTerm={term}` - Поиск пользователей
+- `GET /fetchknownusers` - Получить известных пользователей
+- `GET /getprincipal` - Получить текущего пользователя
+- `GET /fetchuser?id={id}` - Получить пользователя по ID
 
-```bash
-./mvnw test
-```
+### Комнаты
+- `GET /fetchallrooms` - Получить все комнаты текущего пользователя
+- `GET /writetofound?principalId={id1}&recipientId={id2}` - Создать/найти комнату
 
-## Полезные команды Maven
+## База данных
 
-```bash
-# Очистка проекта
-./mvnw clean
+### H2 Console
+Доступ к консоли БД: **http://localhost:8080/h2-console**
 
-# Компиляция
-./mvnw compile
+**Настройки подключения:**
+- JDBC URL: `jdbc:h2:mem:chatdb`
+- User: `sa`
+- Password: (пусто)
 
-# Запуск тестов
-./mvnw test
+## Авторы
 
-# Сборка JAR файла
-./mvnw package
+- **Nadejda Ianciuc** - [GitHub](https://github.com/NadiaYanchuk)
+- **Nichita Rusanov** - [GitHub](https://github.com/n1kry)
+- **David Boroznet** - [GitHub](https://github.com/DavidBoroznet)
+- **Valentina Advahova** - [GitHub](https://github.com/advahovalentina)
 
-# Запуск приложения в dev режиме
-./mvnw spring-boot:run
-
-# Генерация отчета о зависимостях
-./mvnw dependency:tree
-```
-
-## Образовательные цели
-
-Проект демонстрирует:
-- Настройку Spring Boot приложения
-- Работу с WebSocket в Spring
-- Структуру типичного Spring проекта
-- Основы тестирования Spring приложений
