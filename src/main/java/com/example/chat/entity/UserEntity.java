@@ -40,26 +40,11 @@ public class UserEntity {
     @Email(message = "Please enter a correct email")
     private String email;
     
-    @Column(name = "session_id")
-    private String sessionId;
-    
     @Column(name = "join_time", nullable = false)
     private LocalDateTime joinTime;
     
     @Column(name = "last_activity")
     private LocalDateTime lastActivity;
-    
-    @Enumerated(EnumType.STRING)
-    private UserStatus status;
-    
-    @Column(name = "is_online")
-    private Boolean isOnline = false;
-
-    public enum UserStatus {
-        ONLINE,
-        OFFLINE,
-        AWAY
-    }
 
     public UserEntity(String username, String password, String email) {
         this.username = username;
@@ -67,8 +52,6 @@ public class UserEntity {
         this.email = email;
         this.joinTime = LocalDateTime.now();
         this.lastActivity = LocalDateTime.now();
-        this.status = UserStatus.OFFLINE;
-        this.isOnline = false;
     }
     
     @PrePersist
@@ -78,12 +61,6 @@ public class UserEntity {
         }
         if (lastActivity == null) {
             lastActivity = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = UserStatus.OFFLINE;
-        }
-        if (isOnline == null) {
-            isOnline = false;
         }
     }
 }

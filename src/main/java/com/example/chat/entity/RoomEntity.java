@@ -20,20 +20,12 @@ public class RoomEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
-    private String name;
-    
-    @Column(name = "room_type")
-    @Enumerated(EnumType.STRING)
-    private RoomType roomType;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id")
     @ToString.Exclude
     private UserEntity creator;
 
-    // Для приватных чатов (1 на 1)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user1_id")
     @ToString.Exclude
@@ -54,24 +46,13 @@ public class RoomEntity {
     @ToString.Exclude
     private List<MessageEntity> messages;
 
-    public enum RoomType {
-        PUBLIC,    // Публичная комната
-        PRIVATE,   // Приватный чат (1 на 1)
-        GROUP      // Групповой чат
-    }
-
-    public RoomEntity(String name, RoomType roomType, UserEntity creator) {
-        this.name = name;
-        this.roomType = roomType;
+    public RoomEntity(UserEntity creator) {
         this.creator = creator;
         this.createdAt = LocalDateTime.now();
         this.isActive = true;
     }
 
-    // Конструктор для приватного чата
-    public RoomEntity(String name, UserEntity user1, UserEntity user2) {
-        this.name = name;
-        this.roomType = RoomType.PRIVATE;
+    public RoomEntity(UserEntity user1, UserEntity user2) {
         this.user1 = user1;
         this.user2 = user2;
         this.creator = user1;

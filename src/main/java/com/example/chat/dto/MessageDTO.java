@@ -1,26 +1,20 @@
 package com.example.chat.dto;
 
-import com.example.chat.entity.MessageEntity;
-import java.time.LocalDateTime;
+import lombok.*;
 
-public record MessageDTO(
-        Long id,
-        Long userId,
-        String text,
-        LocalDateTime timestamp,
-        MessageEntity.MessageType messageType,
-        Boolean isEdited,
-        LocalDateTime editedAt
-) {
-    public static MessageDTO from(MessageEntity m) {
-        return new MessageDTO(
-                m.getId(),
-                m.getUser() != null ? m.getUser().getId() : null, // id у proxy доступен без инициализации
-                m.getText(),
-                m.getTimestamp(),
-                m.getMessageType(),
-                m.getIsEdited(),
-                m.getEditedAt()
-        );
-    }
+import java.sql.Timestamp;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Setter
+@Getter
+@ToString
+public class MessageDTO {
+    private Long senderId;
+
+    private Long recipientId;
+
+    private String text;
+
+    private Timestamp timestamp;
 }

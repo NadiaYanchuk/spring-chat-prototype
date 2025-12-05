@@ -13,42 +13,23 @@ import java.util.Optional;
 
 @Repository
 public interface UserEntityRepository extends JpaRepository<UserEntity, Long> {
-    
-    Optional<UserEntity> findByUsername(String username);
-    
-    Optional<UserEntity> findByEmail(String email);
-    
-    Optional<UserEntity> findBySessionId(String sessionId);
-    
-    List<UserEntity> findByStatus(UserEntity.UserStatus status);
-    
-    @Query("SELECT u FROM UserEntity u WHERE u.isOnline = true ORDER BY u.lastActivity DESC")
-    List<UserEntity> findOnlineUsers();
-    
-    @Query("SELECT u FROM UserEntity u WHERE u.status = 'ONLINE' ORDER BY u.joinTime DESC")
-    List<UserEntity> findActiveUsers();
-    
-    @Modifying
-    @Query("UPDATE UserEntity u SET u.status = :status WHERE u.sessionId = :sessionId")
-    void updateUserStatus(@Param("sessionId") String sessionId, @Param("status") UserEntity.UserStatus status);
-    
-    @Modifying
-    @Query("UPDATE UserEntity u SET u.lastActivity = :lastActivity WHERE u.sessionId = :sessionId")
-    void updateLastActivity(@Param("sessionId") String sessionId, @Param("lastActivity") LocalDateTime lastActivity);
-    
-    @Modifying
-    @Query("UPDATE UserEntity u SET u.isOnline = :isOnline WHERE u.sessionId = :sessionId")
-    void updateOnlineStatus(@Param("sessionId") String sessionId, @Param("isOnline") Boolean isOnline);
-    
-    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.isOnline = true")
-    long countOnlineUsers();
-    
-    @Query("SELECT COUNT(u) FROM UserEntity u WHERE u.status = 'ONLINE'")
-    long countActiveUsers();
-    
+    UserEntity findByUsername(String username);
+
     boolean existsByUsername(String username);
-    
-    boolean existsByEmail(String email);
-    
-    void deleteBySessionId(String sessionId);
+
+    List<UserEntity> findAllByUsernameNot(String username);
+
+    @Query("SELECT CASE " +
+            "WHEN r.user1.username = :username THEN r.user2.id " +
+            "WHEN r.user2.username = :username THEN r.user1.id " +
+            "END " +
+            "FROM RoomEntity r " +
+            "WHERE r.user1.username = :username OR r.user2.username = :username")
+    List<Long> findConversationParticipantIdsByUsername(@Param("username") String username);
+
+    @Query("SELECT u FROM UserEntity u WHERE u.id <> :userId " +
+            "AND u.id NOT IN (SELECT r.user1.id FROM RoomEntity r WHERE r.user2 = :user) " +
+            "AND u.id NOT IN (SELECT r.user2.id FROM RoomEntity r WHERE r.user1 = :user)" +
+            "AND u.username ILIKE :searchTerm%")
+    List<UserEntity> findUsersWithoutRoomByUser(@Param("user") UserEntity user, @Param("userId") Long userId, @Param("searchTerm") String searchTerm);
 }

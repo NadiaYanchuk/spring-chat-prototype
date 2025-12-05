@@ -1,0 +1,505 @@
+@import url(https://fonts.googleapis.com/css?family=Lato:400,700);
+
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+body {
+    background: #C5DDEB;
+    font: 14px/20px "Lato", Arial, sans-serif;
+    padding: 40px 0;
+    color: white;
+}
+
+.container {
+    margin: 0 auto;
+    width: 70%;
+    background: #444753;
+    border-radius: 5px;
+}
+
+.btn-info {
+    color: white;
+    font-size: 18px;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    background: #3f424c;
+    padding: 0;
+    transition: transform 0.5s ease;
+}
+
+.btn-info:hover {
+    color: #75b1e8;
+    transform: rotate(1turn) scale(1.1);
+}
+
+.btn-info:active {
+    transition: transform 0.01s ease;
+    transform: rotate(-1turn) scale(0.95) ;
+}
+
+.people-list {
+    width: 20%;
+    float: left;
+}
+
+.people-list .search {
+    padding: 20px;
+}
+
+.people-list input {
+    border-radius: 3px;
+    border: none;
+    padding: 14px;
+    color: #e1e1e1;
+    background: #6A6C75;
+    width: 90%;
+    font-size: 14px;
+}
+
+.people-list .fa-search {
+    position: relative;
+    left: -25px;
+}
+
+.people-list ul {
+    padding: 0;
+    /*height: 770px;*/
+}
+
+.people-list ul li {
+    padding: 1px 1px 20px;
+    background-color: #444753;
+}
+
+.people-list ul li.selected {
+    background-color: #3a3d46;
+    box-shadow: inset 0 -2px 0 0 #94c2ed;
+    border-radius: 5px;
+}
+
+.people-list ul li:hover {
+    color: #a2c3ff;
+    background-color: #70768a;
+}
+
+a {
+    color: white;
+    text-decoration: solid;
+}
+
+.people-list img {
+    float: left;
+}
+
+.people-list .about {
+    float: left;
+    margin-top: 8px;
+}
+
+.people-list .about {
+    padding-left: 8px;
+}
+
+.people-list .status {
+    color: #92959E;
+}
+
+.chat {
+    width: 80%;
+    float: left;
+    background: #3f424c;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.chat .chat-header {
+    padding: 20px;
+    border-bottom: 2px solid #444753;
+}
+
+.chat .chat-header img {
+    float: left;
+}
+
+.chat .chat-header .chat-about {
+    float: left;
+    padding-left: 10px;
+    margin-top: 6px;
+}
+
+.chat .chat-header .chat-with {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.chat .chat-header .chat-num-messages {
+    color: #92959E;
+}
+
+.chat .chat-header .fa-star {
+    float: right;
+    color: #D8DADF;
+    font-size: 20px;
+    margin-top: 12px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.chat .chat-history {
+    padding: 20px 30px 20px 30px;
+    border-bottom: 2px solid #444753;
+    overflow-y: scroll;
+    height: 575px;
+
+}
+
+.chat .chat-history .message-data {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.chat .chat-history .message-data-time {
+    font-size: 10px;
+    color: #a8aab1;
+    padding-left: 6px;
+}
+
+.chat .chat-history .message {
+    color: white;
+    padding: 8px 16px;
+    line-height: 26px;
+    font-size: 14px;
+    border-radius: 7px;
+    margin-bottom: 3px;
+    width: fit-content;
+    position: relative;
+    word-wrap: break-word;
+    max-width: 60%;
+}
+
+.chat .chat-history .message:after {
+    top: 0;
+    left: 0;
+    transform: translateX(-50%);
+    content: "";
+    width: 0;
+    height: 0;
+    position: absolute;
+    pointer-events: none;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid #86BB71;
+}
+
+.chat .chat-history .my-message {
+    background: #86BB71;
+}
+
+.chat .chat-history .other-message {
+    background: #94C2ED;
+}
+
+.chat .chat-history .other-message:after {
+    border-top-color: #94C2ED;
+    left: 100%;
+}
+
+.chat .chat-history::-webkit-scrollbar {
+    width: 10px;
+}
+
+/* Track */
+.chat .chat-history::-webkit-scrollbar-track {
+    background: #444753;
+}
+
+/* Handle */
+.chat .chat-history::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background: #94c2ed;
+}
+
+/* Handle on hover */
+.chat .chat-history::-webkit-scrollbar-thumb:hover {
+    background: #82a6c7;
+}
+
+.chat .chat-message {
+    padding: 30px;
+}
+
+.chat .chat-message textarea {
+    width: 100%;
+    border: none;
+    padding: 10px 20px;
+    font: 14px/22px "Lato", Arial, sans-serif;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    resize: none;
+    background-color: #f1f1f1;
+}
+
+.chat .chat-message .fa-file-o, .chat .chat-message .fa-file-image-o {
+    font-size: 16px;
+    color: gray;
+    cursor: pointer;
+}
+
+.chat .chat-message button {
+    float: right;
+    color: #94C2ED;
+    font-size: 16px;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    background: #3f424c;
+    padding: 0;
+    transition: transform 0.05s linear;
+}
+
+.chat .chat-message button:hover {
+    color: #75b1e8;
+}
+
+.chat .chat-message button:active {
+    color: #94c2edcc;
+}
+
+.online, .offline, .me {
+    margin-right: 3px;
+    font-size: 10px;
+}
+
+.online {
+    color: #86BB71;
+}
+
+.offline {
+    color: #E38968;
+}
+
+.me {
+    color: #94C2ED;
+}
+
+.align-left {
+    text-align: left;
+}
+
+.align-right {
+    text-align: right;
+}
+
+.float-right {
+    float: right;
+}
+
+.clearfix:after {
+    visibility: hidden;
+    display: block;
+    font-size: 0;
+    content: " ";
+    clear: both;
+    height: 0;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background-color: #444753;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-profile {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 30px;
+    margin-left: 30px;
+    display: flex;
+    align-items: center;
+}
+
+.user-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.username {
+    margin-inline: 10px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.menu {
+    display: none;
+    position: absolute;
+    background-color: #444753;
+    border: 1px solid #ccc;
+    padding: 2px;
+    right: 0;
+    border-radius: 5px;
+}
+
+.menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu ul li {
+    padding: 5px;
+    margin: 6px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: transform 0.05s;
+}
+
+.menu ul li:hover {
+    color: #a2c3ff;
+    background-color: #70768a;
+    transform: scale(1.01);
+}
+
+.menu ul li:active {
+    color: #a2c3ff;
+    background-color: #70768a;
+    transform: scale(0.98);
+}
+
+.menu li.log-out {
+    border: 1px solid;
+}
+
+.search-list {
+    display: none;
+    z-index: 1;
+    overflow-y: scroll;
+    max-height: 200px;
+    position: absolute;
+    background-color: #444753;
+    border: 1px solid #ccc;
+    padding: 2px;
+    width: 100%;
+    border-radius: 5px;
+}
+
+.search-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.search-list ul li {
+    padding: 5px;
+    margin: 6px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: transform 0.05s;
+}
+
+.search-list ul li:hover {
+    color: #9fde87;
+    background-color: #70768a;
+    transform: scale(1.01);
+}
+
+.search-list::-webkit-scrollbar {
+    width: 10px;
+}
+
+/* Track */
+.search-list::-webkit-scrollbar-track {
+    background: #444753;
+}
+
+/* Handle */
+.search-list::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background: #85ba70;
+}
+
+/* Handle on hover */
+.search-list::-webkit-scrollbar-thumb:hover {
+    background: #779f66;
+}
+
+.search-wrapper {
+    margin: auto;
+    left: 84px;
+    position: relative;
+}
+
+.search-input {
+    padding: 8px 30px 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f1f1f1;
+    font: 14px/22px "Lato", Arial, sans-serif;
+    width: 400px;
+}
+
+.unselected {
+    height: calc(100% - 30px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #94c2ed;
+}
+
+.context-menu {
+    display: none;
+    position: absolute;
+    background-color: #444753;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    list-style: none;
+}
+
+
+.context-menu ul {
+    padding: 0;
+    margin: 0;
+}
+
+.context-menu ul li {
+    padding: 5px 30px 5px 20px;
+    margin: 6px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: transform 0.05s;
+}
+
+.context-menu ul li:hover {
+    color: #a2c3ff;
+    background-color: #70768a;
+    transform: scale(1.01);
+}
+
+.context-menu ul li:active {
+    color: #a2c3ff;
+    background-color: #70768a;
+    transform: scale(0.98);
+}
+
+.context-menu ul li i {
+    padding-right: 20px;
+}
+
+#delete-button {
+    background-color: #ff0000;
+    color: #fff;
+}

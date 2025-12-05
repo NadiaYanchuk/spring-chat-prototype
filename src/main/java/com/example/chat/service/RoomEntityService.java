@@ -1,5 +1,6 @@
 package com.example.chat.service;
 
+import com.example.chat.dto.RoomDTO;
 import com.example.chat.entity.RoomEntity;
 import com.example.chat.entity.UserEntity;
 import com.example.chat.repository.RoomEntityRepository;
@@ -16,116 +17,51 @@ import java.util.Optional;
 @Slf4j
 @Transactional
 public class RoomEntityService {
-    
-    private final RoomEntityRepository roomRepository;
-    
-    public RoomEntity createPublicRoom(String roomName, UserEntity creator) {
-        log.info("Creating public room '{}' by user {}", roomName, creator.getUsername());
-        
-        if (roomRepository.existsByName(roomName)) {
-            throw new IllegalArgumentException("Room with name '" + roomName + "' already exists");
-        }
-        
-        RoomEntity room = new RoomEntity(roomName, RoomEntity.RoomType.PUBLIC, creator);
-        RoomEntity savedRoom = roomRepository.save(room);
-        
-        log.info("Public room created with ID: {}", savedRoom.getId());
-        return savedRoom;
-    }
 
-    public RoomEntity createPrivateRoom(UserEntity user1, UserEntity user2) {
-        log.info("Creating private room between {} and {}", user1.getUsername(), user2.getUsername());
+    private final RoomEntityRepository roomDAO;
 
-        // Проверяем, существует ли уже приватная комната между этими пользователями
-        Optional<RoomEntity> existingRoom = roomRepository.findPrivateRoomBetweenUsers(user1, user2);
-        if (existingRoom.isPresent()) {
-            log.info("Private room already exists between users");
-            return existingRoom.get();
+    private final UserEntityService userService;
+
+    public void save(RoomEntity room) {
+        Long user1Id = room.getUser1().getId();
+        Long user2Id = room.getUser2().getId();
+
+        // Проверяем наличие комнаты с зеркальным сходством идентификаторов пользователей
+        if (roomDAO.existsByUser1_IdAndUser2_Id(user2Id, user1Id)) {
+            throw new IllegalArgumentException("Комната уже существует");
         }
 
-        String roomName = "Private: " + user1.getUsername() + " & " + user2.getUsername();
-        RoomEntity room = new RoomEntity(roomName, user1, user2);
-        RoomEntity savedRoom = roomRepository.save(room);
-
-        log.info("Private room created with ID: {}", savedRoom.getId());
-        return savedRoom;
+        roomDAO.save(room);
     }
 
-    public RoomEntity createGroupRoom(String roomName, UserEntity creator) {
-        log.info("Creating group room '{}' by user {}", roomName, creator.getUsername());
+    public RoomEntity insert(Long user1Id, Long user2Id) {
 
-        if (roomRepository.existsByName(roomName)) {
-            throw new IllegalArgumentException("Room with name '" + roomName + "' already exists");
+        RoomEntity room = roomDAO.findByUser1_IdAndUser2_Id(user1Id, user2Id);
+
+        // Проверяем наличие комнаты с зеркальным сходством идентификаторов пользователей
+        if (room != null) {
+            return room;
         }
 
-        RoomEntity room = new RoomEntity(roomName, RoomEntity.RoomType.GROUP, creator);
-        RoomEntity savedRoom = roomRepository.save(room);
+        UserEntity user1 = userService.findById(user1Id);
+        UserEntity user2 = userService.findById(user2Id);
 
-        log.info("Group room created with ID: {}", savedRoom.getId());
-        return savedRoom;
-    }
+        room = new RoomEntity();
+        room.setUser1(user1);
+        room.setUser2(user2);
 
-    public Optional<RoomEntity> findByName(String roomName) {
-        return roomRepository.findByName(roomName);
-    }
-
-    public RoomEntity findById(Long id) {
-        return roomRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found with ID: " + id));
+        return roomDAO.save(room);
     }
 
-    public List<RoomEntity> getActivePublicRooms() {
-        return roomRepository.findActivePublicRooms();
+    public RoomEntity findByUsersUsernames(String user1, String user2) {
+        return roomDAO.findByUser1UsernameAndUser2UsernameOrUser2UsernameAndUser1Username(user1, user2);
     }
 
-    public List<RoomEntity> getUserRooms(UserEntity user) {
-        return roomRepository.findUserRooms(user);
+    public RoomEntity findByUsersIds(Long user1, Long user2) {
+        return roomDAO.findByUser1IdAndUser2IdOrUser2IdAndUser1Id(user1, user2);
     }
 
-    public List<RoomEntity> getRoomsByType(RoomEntity.RoomType roomType) {
-        return roomRepository.findByRoomType(roomType);
-    }
-
-    public List<RoomEntity> getActiveRooms() {
-        return roomRepository.findByIsActiveTrue();
-    }
-
-    public List<RoomEntity> getRoomsByCreator(UserEntity creator) {
-        return roomRepository.findByCreator(creator);
-    }
-
-    public Optional<RoomEntity> findPrivateRoomBetweenUsers(UserEntity user1, UserEntity user2) {
-        return roomRepository.findPrivateRoomBetweenUsers(user1, user2);
-    }
-
-    public long getMessageCountInRoom(RoomEntity room) {
-        return roomRepository.countMessagesInRoom(room);
-    }
-    
-    public void deactivateRoom(Long roomId) {
-        log.info("Deactivating room with ID: {}", roomId);
-        RoomEntity room = findById(roomId);
-        room.setIsActive(false);
-        roomRepository.save(room);
-    }
-    
-    public void activateRoom(Long roomId) {
-        log.info("Activating room with ID: {}", roomId);
-        RoomEntity room = findById(roomId);
-        room.setIsActive(true);
-        roomRepository.save(room);
-    }
-    
-    public void deleteRoom(Long roomId) {
-        log.info("Deleting room with ID: {}", roomId);
-        roomRepository.deleteById(roomId);
-    }
-    
-    public List<RoomEntity> getAllRooms() {
-        return roomRepository.findAll();
-    }
-    
-    public boolean roomExists(String roomName) {
-        return roomRepository.existsByName(roomName);
+    public List<RoomDTO> findRoomsByUser(String userName) {
+        return roomDAO.findRoomsByUser(userName).stream().map(RoomDTO::getRoomDtoFromRoom).toList();
     }
 }

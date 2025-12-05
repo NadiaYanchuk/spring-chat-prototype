@@ -9,99 +9,88 @@ import com.example.chat.service.UserEntityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
-@Component
-@RequiredArgsConstructor
-@Slf4j
-public class DataLoader implements CommandLineRunner {
-    
-    private final UserEntityService userService;
-    private final RoomEntityService roomService;
-    private final MessageEntityService messageService;
+@Configuration
+public class DataLoader {
 
-    @Override
-    public void run(String... args) throws Exception {
-        log.info("Starting data initialization...");
-        
-        // Создаем тестовых пользователей
-        createTestUsers();
-        
-        // Создаем тестовые комнаты
-        createTestRooms();
-        
-        // Создаем тестовые сообщения
-        createTestMessages();
-        
-        log.info("Data initialization completed!");
+    @Bean
+    public UserEntity user1() {
+        UserEntity user = new UserEntity();
+        user.setUsername("n1kry");
+        user.setEmail("1@mail.com");
+        user.setPassword("1");
+
+        return user;
     }
-    
-    private void createTestUsers() {
-        log.info("Creating test users...");
-        
-        try {
-            userService.createUser("admin", "admin123", "admin@chat.com");
-            userService.createUser("alice", "alice123", "alice@example.com");
-            userService.createUser("bob", "bob123", "bob@example.com");
-            userService.createUser("charlie", "charlie123", "charlie@example.com");
-            
-            log.info("Test users created successfully");
-        } catch (Exception e) {
-            log.warn("Some test users already exist or error occurred: {}", e.getMessage());
-        }
+
+    @Bean
+    public UserEntity user2() {
+        UserEntity user = new UserEntity();
+        user.setUsername("n1kry2");
+        user.setEmail("2@mail.com");
+        user.setPassword("1");
+
+        return user;
     }
-    
-    private void createTestRooms() {
-        log.info("Creating test rooms...");
-        
-        try {
-            UserEntity admin = userService.findByUsername("admin").orElseThrow();
-            UserEntity alice = userService.findByUsername("alice").orElseThrow();
-            UserEntity bob = userService.findByUsername("bob").orElseThrow();
-            
-            // Создаем публичные комнаты
-            roomService.createPublicRoom("General", admin);
-            roomService.createPublicRoom("Random", admin);
-            roomService.createPublicRoom("Tech Talk", alice);
-            
-            // Создаем групповую комнату
-            roomService.createGroupRoom("Spring Developers", admin);
-            
-            // Создаем приватную комнату
-            roomService.createPrivateRoom(alice, bob);
-            
-            log.info("Test rooms created successfully");
-        } catch (Exception e) {
-            log.warn("Some test rooms already exist or error occurred: {}", e.getMessage());
-        }
+
+    @Bean
+    public UserEntity user3() {
+        UserEntity user = new UserEntity();
+        user.setUsername("n1kry3");
+        user.setEmail("3@mail.com");
+        user.setPassword("1");
+
+        return user;
     }
-    
-    private void createTestMessages() {
-        log.info("Creating test messages...");
-        
-        try {
-            UserEntity admin = userService.findByUsername("admin").orElseThrow();
-            UserEntity alice = userService.findByUsername("alice").orElseThrow();
-            UserEntity bob = userService.findByUsername("bob").orElseThrow();
-            
-            RoomEntity generalRoom = roomService.findByName("General").orElseThrow();
-            RoomEntity techRoom = roomService.findByName("Tech Talk").orElseThrow();
-            
-            // Сообщения в General комнате
-            messageService.sendMessage(generalRoom, admin, "Добро пожаловать в общий чат!");
-            messageService.sendMessage(generalRoom, alice, "Привет всем! 👋");
-            messageService.sendMessage(generalRoom, bob, "Отличная система чата!");
-            
-            // Сообщения в Tech Talk комнате
-            messageService.sendMessage(techRoom, alice, "Обсуждаем Spring Boot здесь");
-            messageService.sendMessage(techRoom, admin, "Отличная тема для обсуждения");
-            
-            // Системное сообщение
-            messageService.sendSystemMessage(generalRoom, admin, "Система чата запущена", MessageEntity.MessageType.SYSTEM);
-            
-            log.info("Test messages created successfully");
-        } catch (Exception e) {
-            log.warn("Error creating test messages: {}", e.getMessage());
-        }
+
+    @Bean
+    public UserEntity friend1() {
+        UserEntity user = new UserEntity();
+        user.setUsername("friend1");
+        user.setEmail("4@mail.com");
+        user.setPassword("1");
+
+        return user;
+    }
+
+    @Bean
+    public UserEntity friend2() {
+        UserEntity user = new UserEntity();
+        user.setUsername("friend2");
+        user.setEmail("5@mail.com");
+        user.setPassword("1");
+
+        return user;
+    }
+
+    @Bean
+    public RoomEntity room1() {
+        RoomEntity room = new RoomEntity();
+
+        return room;
+    }
+
+    @Bean
+    public RoomEntity room2() {
+        RoomEntity room = new RoomEntity();
+
+        return room;
+    }
+
+    @Bean
+    public MessageEntity message1() {
+        MessageEntity message = new MessageEntity();
+
+        return message;
+    }
+
+    @Bean
+    public MessageEntity message2() {
+        MessageEntity message = new MessageEntity();
+
+        return message;
     }
 }
