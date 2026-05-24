@@ -10,4 +10,5 @@ public final class WebSocketDestinations {
     public static final String UPDATE_MESSAGE_TOPIC = "/topic/updatemessage/";
     public static final String DELETE_MESSAGE_TOPIC = "/topic/deletemsg/";
     public static final String NEW_DIALOG_TOPIC = "/topic/newdialog/";
+    public static final String STATUS_TOPIC = "/topic/status";
 }

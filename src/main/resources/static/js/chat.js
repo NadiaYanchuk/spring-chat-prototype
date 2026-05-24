@@ -10,10 +10,12 @@ let socket = new SockJS(url + '/chat'); // Создание нового WebSock
 
 
 // Функция для подключения к чату
+let pendingStatuses = {};
+
 function connectToChat(principal) {
     console.log("connecting to chat...") // Вывод сообщения о попытке подключения к чату
     stompClient = Stomp.over(socket); // Создание объекта StompClient для управления соединением
-    stompClient.connect({}, function (frame) {
+    stompClient.connect({ login: principal.username }, function (frame) {
         console.log("connected to: " + frame); // Вывод сообщения об успешном подключении к чату
         stompClient.subscribe("/topic/messages/" + principal.id, function (response) {
             let data = JSON.parse(response.body); // Разбор полученных данных в формате JSON
@@ -45,13 +47,45 @@ function connectToChat(principal) {
         })
         stompClient.subscribe('/topic/deletemsg/' + principal.id, function (r) {
             const data = JSON.parse(r.body);
-
+            
             if (!!$(`#${Date.parse(data.timestamp)}`)) {
                 $(`#${Date.parse(data.timestamp)}`).parent().remove();
             }
             updateChatNumMessages();
-        })
+        });
+
+        // Онлайн-статусы от всех
+        stompClient.subscribe('/topic/status', function (r) {
+            const parts = r.body.split(':');
+            const username = parts[0];
+            const status = parts[1];
+
+            const user = users ? users.find(u => u.username === username) : null;
+            if (user) {
+                updateUserStatus(user.id, status);
+            } else {
+                // Пользователь ещё не загружен — запомним статус
+                pendingStatuses[username] = status;
+            }
+        });
     });
+}
+
+// Обновляет иконку статуса, повторяет если элемент ещё не отрисован
+function updateUserStatus(userId, status) {
+    const icon = $('#userNameAppender_' + userId)
+        .closest('li')
+        .find('.fa-circle');
+
+    if (icon.length) {
+        if (status === 'online') {
+            icon.removeClass('offline').addClass('online');
+        } else {
+            icon.removeClass('online').addClass('offline');
+        }
+    } else {
+        setTimeout(() => updateUserStatus(userId, status), 500);
+    }
 }
 
 // Увеличивает счётчик новых сообщений у пользователя в списке
@@ -167,6 +201,16 @@ function fetchKnown() {
         for (let i = 0; i < users.length; i++) {
             appendUsers(users[i].id, users[i].username)
         }
+
+        // Запрашиваем кто уже онлайн
+        $.get(url + "/getonlineusers", function (onlineUsernames) {
+            for (let i = 0; i < users.length; i++) {
+                if (onlineUsernames.includes(users[i].username)) {
+                    updateUserStatus(users[i].id, 'online');
+                }
+            }
+});
+
     }).done(function () {
         $('#usersList').off('click', 'li').on('click', 'li', function (e) {
             const current = document.getElementsByClassName("selected");
