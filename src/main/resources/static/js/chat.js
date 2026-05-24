@@ -11,20 +11,20 @@ let socket = new SockJS(url + '/chat'); // Создание нового WebSock
 
 // Функция для подключения к чату
 function connectToChat(principal) {
-    console.log("connecting to chat...") // Вывод сообщения о попытке подключения к чату
-    stompClient = Stomp.over(socket); // Создание объекта StompClient для управления соединением
+    console.log("connecting to chat...")
+    stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
-        console.log("connected to: " + frame); // Вывод сообщения об успешном подключении к чату
+        console.log("connected to: " + frame);
         stompClient.subscribe("/topic/messages/" + principal.id, function (response) {
-            let data = JSON.parse(response.body); // Разбор полученных данных в формате JSON
+            let data = JSON.parse(response.body);
             console.log("Data", data);
             if (!selectedUser) {
-                $('#userNameAppender_' + data.user.id).append('<span id="newMessage_' + data.user.id + '" style="color: red">+1</span>'); // Отображение индикатора нового сообщения для пользователя в списке пользователей
+                incrementCounter(data.user.id);
             } else {
                 if (selectedUser.username === data.user.username) {
-                    liveRender(data.text, data.user.username, data.timestamp); // Вызов функции для отображения полученного сообщения в чате
+                    liveRender(data.text, data.user.username, data.timestamp);
                 } else {
-                    $('#userNameAppender_' + data.user.id).append('<span id="newMessage_' + data.user.id + '" style="color: red">+1</span>'); // Отображение индикатора нового сообщения для пользователя в списке пользователей
+                    incrementCounter(data.user.id);
                 }
             }
         });
@@ -49,8 +49,30 @@ function connectToChat(principal) {
             if (!!$(`#${Date.parse(data.timestamp)}`)) {
                 $(`#${Date.parse(data.timestamp)}`).parent().remove();
             }
+
+            // Обновляем счётчик сообщений после удаления
+            updateChatNumMessages();
         })
     });
+}
+
+// Увеличивает счётчик новых сообщений у пользователя в списке
+function incrementCounter(userId) {
+    let counter = $('#newMessage_' + userId);
+    if (counter.length) {
+        let current = parseInt(counter.text().replace('+', '')) || 0;
+        counter.text('+' + (current + 1));
+    } else {
+        $('#userNameAppender_' + userId).append(
+            '<span id="newMessage_' + userId + '" style="color: red">+1</span>'
+        );
+    }
+}
+
+// Обновляет надпись с количеством сообщений в заголовке чата
+function updateChatNumMessages() {
+    const count = $('#chat-history li').length;
+    $('.chat-num-messages').text(count + ' messages');
 }
 
 // Функция для отправки сообщения
@@ -95,50 +117,52 @@ function updateMsg(text, timestamp) {
 // Функция для регистрации пользователя
 function registration() {
     $.get(url + "/getprincipal", function (response) {
-        principal = response; // Получение имени текущего пользователя
+        principal = response;
 
         console.log('Principal -> ', principal)
 
-        $('#userName').text(principal.username); // Отображение имени текущего пользователя
+        $('#userName').text(principal.username);
 
-        connectToChat(principal); // Подключение к чату с использованием имени текущего пользователя
+        connectToChat(principal);
 
-        fetchKnown(); // Получение списка пользователей
+        fetchKnown();
     });
 }
 
 // Функция для выбора пользователя для чата
 function selectUser(userId) {
-    console.log("selecting users: " + userId); // Вывод выбранного пользователя в консоль
-    console.log()
+    console.log("selecting users: " + userId);
 
-    selectedUser = users.find(u => u.id === Number(userId)); // Установка выбранного пользователя
+    selectedUser = users.find(u => u.id === Number(userId));
     console.log('Selected user', selectedUser)
 
-    let isNew = document.getElementById("newMessage_" + selectedUser.id) !== null; // Проверка, есть ли у выбранного пользователя новые сообщения
-    if (isNew) {
-        let element = document.getElementById("newMessage_" + selectedUser.id);
-        element.parentNode.removeChild(element); // Удаление индикатора нового сообщения для выбранного пользователя
+    // Сбрасываем счётчик новых сообщений для выбранного пользователя
+    let counter = document.getElementById("newMessage_" + selectedUser.id);
+    if (counter) {
+        counter.parentNode.removeChild(counter);
     }
-    $('#selectedUserId').html('');
-    $('#selectedUserId').append('Chat with ' + selectedUser.username); // Отображение выбранного пользователя для чата
-    $('#chat-history').html('').removeClass('unselected'); // Очистка истории чата
-    $('.chat-message').show();
 
-    render(principal, selectedUser); // Отображение сообщений между текущим пользователем и выбранным пользователем
+    $('#selectedUserId').html('');
+    $('#selectedUserId').append('Chat with ' + selectedUser.username);
+    $('#chat-history').html('').removeClass('unselected');
+    $('.chat-message').show();
+    $('.chat-num-messages').text('');
+
+    render(principal, selectedUser);
 }
 
-let users; //массив объектов user (тех с которыми общаеся principal)
+let users;
 
 // Функция для получения списка всех пользователей
 function fetchKnown() {
     $.get(url + "/fetchknownusers", function (response) {
-        users = response; // Получение списка пользователей
+        users = response;
         console.log('Fetch', users)
-        $('#usersList').html(''); // Отображение списка пользователей
+        $('#usersList').html('');
         $('#selectedUserId').html('');
         $('#chat-history').html('Chose someone to start chatting :)').addClass('unselected');
         $('.chat-message').hide();
+        $('.chat-num-messages').text('');
 
         selectedUser = null;
 
@@ -151,17 +175,15 @@ function fetchKnown() {
             if (current.length > 0) {
                 current[0].classList.remove("selected");
             }
-            this.classList.add("selected"); // Выделение выбранного пользователя в списке пользователей
+            this.classList.add("selected");
         });
     });
 }
 
 function writeToUser(id) {
-
     $.get(url + '/writetofound?principalId=' + principal.id + '&recipientId=' + id, function (response) {
         let room = response;
         console.log('Room', room)
-
     })
     console.log("write to user " + id)
     console.log("write to user1 " + list.find(u => u.id === Number(id)).id)
