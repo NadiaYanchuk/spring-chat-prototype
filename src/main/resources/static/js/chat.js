@@ -11,18 +11,18 @@ let socket = new SockJS(url + '/chat'); // Создание нового WebSock
 
 // Функция для подключения к чату
 function connectToChat(principal) {
-    console.log("connecting to chat...")
-    stompClient = Stomp.over(socket);
+    console.log("connecting to chat...") // Вывод сообщения о попытке подключения к чату
+    stompClient = Stomp.over(socket); // Создание объекта StompClient для управления соединением
     stompClient.connect({}, function (frame) {
-        console.log("connected to: " + frame);
+        console.log("connected to: " + frame); // Вывод сообщения об успешном подключении к чату
         stompClient.subscribe("/topic/messages/" + principal.id, function (response) {
-            let data = JSON.parse(response.body);
+            let data = JSON.parse(response.body); // Разбор полученных данных в формате JSON
             console.log("Data", data);
             if (!selectedUser) {
                 incrementCounter(data.user.id);
             } else {
                 if (selectedUser.username === data.user.username) {
-                    liveRender(data.text, data.user.username, data.timestamp);
+                    liveRender(data.text, data.user.username, data.timestamp); // Вызов функции для отображения полученного сообщения в чате
                 } else {
                     incrementCounter(data.user.id);
                 }
@@ -49,8 +49,6 @@ function connectToChat(principal) {
             if (!!$(`#${Date.parse(data.timestamp)}`)) {
                 $(`#${Date.parse(data.timestamp)}`).parent().remove();
             }
-
-            // Обновляем счётчик сообщений после удаления
             updateChatNumMessages();
         })
     });
@@ -117,23 +115,24 @@ function updateMsg(text, timestamp) {
 // Функция для регистрации пользователя
 function registration() {
     $.get(url + "/getprincipal", function (response) {
-        principal = response;
+        principal = response; // Получение имени текущего пользователя
 
         console.log('Principal -> ', principal)
 
-        $('#userName').text(principal.username);
+        $('#userName').text(principal.username); // Отображение имени текущего пользователя
 
-        connectToChat(principal);
+        connectToChat(principal); // Подключение к чату с использованием имени текущего пользователя
 
-        fetchKnown();
+        fetchKnown(); // Получение списка пользователей
     });
 }
 
 // Функция для выбора пользователя для чата
 function selectUser(userId) {
-    console.log("selecting users: " + userId);
+    console.log("selecting users: " + userId); // Вывод выбранного пользователя в консоль
+    console.log()
 
-    selectedUser = users.find(u => u.id === Number(userId));
+    selectedUser = users.find(u => u.id === Number(userId)); // Установка выбранного пользователя
     console.log('Selected user', selectedUser)
 
     // Сбрасываем счётчик новых сообщений для выбранного пользователя
@@ -141,24 +140,23 @@ function selectUser(userId) {
     if (counter) {
         counter.parentNode.removeChild(counter);
     }
-
     $('#selectedUserId').html('');
-    $('#selectedUserId').append('Chat with ' + selectedUser.username);
-    $('#chat-history').html('').removeClass('unselected');
+    $('#selectedUserId').append('Chat with ' + selectedUser.username); // Отображение выбранного пользователя для чата
+    $('#chat-history').html('').removeClass('unselected'); // Очистка истории чата
     $('.chat-message').show();
     $('.chat-num-messages').text('');
 
-    render(principal, selectedUser);
+    render(principal, selectedUser); // Отображение сообщений между текущим пользователем и выбранным пользователем
 }
 
-let users;
+let users; //массив объектов user (тех с которыми общаеся principal)
 
 // Функция для получения списка всех пользователей
 function fetchKnown() {
     $.get(url + "/fetchknownusers", function (response) {
-        users = response;
+        users = response; // Получение списка пользователей
         console.log('Fetch', users)
-        $('#usersList').html('');
+        $('#usersList').html(''); // Отображение списка пользователей
         $('#selectedUserId').html('');
         $('#chat-history').html('Chose someone to start chatting :)').addClass('unselected');
         $('.chat-message').hide();
@@ -175,15 +173,17 @@ function fetchKnown() {
             if (current.length > 0) {
                 current[0].classList.remove("selected");
             }
-            this.classList.add("selected");
+            this.classList.add("selected"); // Выделение выбранного пользователя в списке пользователей
         });
     });
 }
 
 function writeToUser(id) {
+
     $.get(url + '/writetofound?principalId=' + principal.id + '&recipientId=' + id, function (response) {
         let room = response;
         console.log('Room', room)
+
     })
     console.log("write to user " + id)
     console.log("write to user1 " + list.find(u => u.id === Number(id)).id)
