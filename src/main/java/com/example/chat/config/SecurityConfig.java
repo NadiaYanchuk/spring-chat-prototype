@@ -1,24 +1,26 @@
 package com.example.chat.config;
 
 import com.example.chat.entity.UserEntity;
+import com.example.chat.security.JwtFilter;
 import com.example.chat.repository.UserEntityRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
 import java.util.Collections;
 
@@ -36,34 +38,34 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .httpBasic(Customizer.withDefaults());
-
+                
         return http.build();
     }
 
     @Bean
     @Order(2)
-    public SecurityFilterChain appSecurity(HttpSecurity http) throws Exception {
+    public SecurityFilterChain appSecurity(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/registration", "/login*", "/webjars/**", "/css/**", "/js/**", "/h2-console/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/deletemessage**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/chat")
-                        .failureUrl("/login?error=true")
-                        .permitAll()
-                )
+                .formLogin(AbstractHttpConfigurer::disable)
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login")
+                        .deleteCookies("jwt")
                         .permitAll()
-                );
-
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean
@@ -73,8 +75,8 @@ public class SecurityConfig {
             if (user == null) {
                 throw new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: " + username);
             }
-            GrantedAuthority authority = new SimpleGrantedAuthority("USER");
-            return new User(user.getUsername(), user.getPassword(), Collections.singletonList(authority));
+            return new User(user.getUsername(), user.getPassword(),
+                    Collections.singletonList(new SimpleGrantedAuthority("USER")));
         };
     }
 
