@@ -20,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
 import java.util.Collections;
@@ -48,11 +49,19 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/registration", "/login*", "/webjars/**", "/css/**", "/js/**", "/h2-console/**").permitAll()
+                        .requestMatchers("/registration", "/login*", "/webjars/**", "/styles/**", "/css/**",  "/js/**", "/h2-console/**", "/favicon.ico", "/img/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(
+                            new LoginUrlAuthenticationEntryPoint("/login")
+                    )
+                )
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .formLogin(AbstractHttpConfigurer::disable)
+                .formLogin(form -> form
+                    .loginPage("/login")
+                    .permitAll()
+                )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login")
