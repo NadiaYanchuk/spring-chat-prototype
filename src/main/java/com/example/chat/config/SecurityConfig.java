@@ -3,6 +3,7 @@ package com.example.chat.config;
 import com.example.chat.entity.UserEntity;
 import com.example.chat.security.JwtFilter;
 import com.example.chat.repository.UserEntityRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,7 +22,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
 import java.util.Collections;
@@ -48,27 +49,46 @@ public class SecurityConfig {
     public SecurityFilterChain appSecurity(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/registration", "/login*", "/webjars/**", "/styles/**", "/css/**",  "/js/**", "/h2-console/**", "/favicon.ico", "/img/**").permitAll()
+                        .requestMatchers(
+                                "/registration",
+                                "/login",
+                                "/webjars/**",
+                                "/styles/**",
+                                "/css/**",
+                                "/js/**",
+                                "/h2-console/**",
+                                "/favicon.ico",
+                                "/img/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                    .authenticationEntryPoint(
-                            new LoginUrlAuthenticationEntryPoint("/login")
-                    )
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            String accept = request.getHeader("Accept");
+                            String uri = request.getRequestURI();
+
+                            boolean htmlPageRequest = accept != null
+                                    && accept.contains("text/html")
+                                    && ("/".equals(uri) || "/chat".equals(uri));
+
+                            if (htmlPageRequest) {
+                                response.sendRedirect("/login");
+                                return;
+                            }
+
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                        })
                 )
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .formLogin(form -> form
-                    .loginPage("/login")
-                    .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login")
-                        .deleteCookies("jwt")
-                        .permitAll()
-                )
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

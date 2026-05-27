@@ -27,9 +27,23 @@ public interface UserEntityRepository extends JpaRepository<UserEntity, Long> {
             "WHERE r.user1.username = :username OR r.user2.username = :username")
     List<Long> findConversationParticipantIdsByUsername(@Param("username") String username);
 
-    @Query("SELECT u FROM UserEntity u WHERE u.id <> :userId " +
-            "AND u.id NOT IN (SELECT r.user1.id FROM RoomEntity r WHERE r.user2 = :user) " +
-            "AND u.id NOT IN (SELECT r.user2.id FROM RoomEntity r WHERE r.user1 = :user)" +
-            "AND u.username ILIKE :searchTerm%")
-    List<UserEntity> findUsersWithoutRoomByUser(@Param("user") UserEntity user, @Param("userId") Long userId, @Param("searchTerm") String searchTerm);
+    @Query("""
+        SELECT u
+        FROM UserEntity u
+        WHERE u.id <> :userId
+          AND u.id NOT IN (
+              SELECT r.user1.id
+              FROM RoomEntity r
+              WHERE r.user2 = :user
+          )
+          AND u.id NOT IN (
+              SELECT r.user2.id
+              FROM RoomEntity r
+              WHERE r.user1 = :user
+          )
+          AND LOWER(u.username) LIKE LOWER(CONCAT(:searchTerm, '%'))
+    """)
+        List<UserEntity> findUsersWithoutRoomByUser(@Param("user") UserEntity user,
+                                                    @Param("userId") Long userId,
+                                                    @Param("searchTerm") String searchTerm);
 }

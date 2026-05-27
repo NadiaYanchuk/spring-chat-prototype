@@ -28,18 +28,28 @@ public class JwtFilter extends OncePerRequestFilter {
 protected void doFilterInternal(HttpServletRequest request,
                                 HttpServletResponse response,
                                 FilterChain filterChain) throws ServletException, IOException {
-    String token = extractTokenFromCookie(request);
+        String token = extractTokenFromCookie(request);
 
-    if (token != null && jwtService.isTokenValid(token)) {
+        if (token != null
+                && !token.isBlank()
+                && jwtService.isTokenValid(token)
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
         String username = jwtService.extractUsername(token);
-        
+
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
             UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (UsernameNotFoundException e) {
             Cookie cookie = new Cookie("jwt", null);
+            cookie.setHttpOnly(true);
             cookie.setMaxAge(0);
             cookie.setPath("/");
             response.addCookie(cookie);
@@ -50,10 +60,14 @@ protected void doFilterInternal(HttpServletRequest request,
 }
 
     private String extractTokenFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null) {
+            return null;
+        }
+
         return Arrays.stream(request.getCookies())
                 .filter(c -> "jwt".equals(c.getName()))
                 .map(Cookie::getValue)
+                .filter(value -> value != null && !value.isBlank())
                 .findFirst()
                 .orElse(null);
     }

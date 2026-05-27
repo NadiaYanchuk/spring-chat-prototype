@@ -10,9 +10,6 @@ import lombok.*;
 @Getter
 @ToString
 public class UpdateMessageDTO {
-    @NotNull(message = "Recipient ID cannot be null")
-    private Long recipient;
-
     @NotBlank(message = "Message text cannot be blank")
     private String text;
 }

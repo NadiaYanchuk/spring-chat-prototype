@@ -33,35 +33,52 @@ function copyMessage() {
     });
 }
 
-function deleteMessage() {
-    // Delete the message here
-    $.ajax({
-        url: '/deletemessage',
-        type: 'DELETE',
-        data: JSON.stringify({
-            timestamp: messageContainer.find('[id]').attr('id'),
-            recipient: selectedUser.id,
-            principal: principal.id
-        }),
-        contentType: 'application/json',
-        success: function () {
-            contextMenu.hide();
-        },
-        error: function (error) {
-            console.error('Error:', error);
-        }
-    });
+function deleteMsg(messageId) {
+    return fetch('/deletemessage/' + messageId, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (isAuthFailedResponse(response)) {
+                disconnectAndRedirectToLogin();
+                throw new Error('Not authenticated');
+            }
 
+            if (!response.ok) {
+                throw new Error('Error deleting message');
+            }
+
+            console.log('Message deleted successfully');
+            return true;
+        });
+}
+
+function deleteMessage() {
+    const messageId = messageContainer.find('.message').data('message-id');
+
+    if (!messageId) {
+        console.error('Message id was not found');
+        return;
+    }
+
+    deleteMsg(messageId)
+        .then(function () {
+            contextMenu.hide();
+        })
+        .catch(function (error) {
+            console.error('Delete failed:', error);
+        });
 }
 
 function editMessage() {
-    console.log('edit')
     const textArea = $('#message-to-send');
     const saveBtn = $('#sendBtn');
 
-    textArea.val(messageContainer.context.innerText)
+    const messageText = messageContainer.find('.message').text().trim();
+
+    textArea.val(messageText);
     textArea.focus();
-    saveBtn.text('save');
+    saveBtn.text('Save');
 }
 
 let contextMenu = $('.context-menu');
@@ -70,9 +87,8 @@ const $deleteButton = contextMenu.find('#delete-button');
 const $editeButton = contextMenu.find('#edite-button');
 const $copyButton = contextMenu.find('#copy-button');
 
-function addContextMenu(id) {
-    // Attach contextmenu event handler to each message
-    $(`#${id}`).on('contextmenu', function (e) {
+function addContextMenu(messageId) {
+    $('#message-' + messageId).on('contextmenu', function (e) {
         // Prevent the default context menu from appearing
         e.preventDefault();
 
@@ -94,8 +110,10 @@ function addContextMenu(id) {
 
         if ($(this).hasClass('my-message')) {
             $editeButton.hide();
+            $deleteButton.hide();
         } else {
             $editeButton.show();
+            $deleteButton.show();
         }
 
         contextMenu.show();
@@ -116,79 +134,118 @@ function render(sender, recipient) {
     console.log(sender, recipient)
 
     setTimeout(function () {
-        $.get(url + "/getmessages?sender=" + sender.id + "&recipient=" + recipient.id, function (response) {
-            let messages = response; // Получение списка сообщений
-            console.log(messages);
-            for (let i = 0; i < messages.length; i++) {
-                if (messages[i].user.username === principal.username) {
-                    $chatHistoryList.append(template({
-                        messageOutput: messages[i].text,
-                        time: getTime(messages[i].timestamp),
-                        myidentifier: Date.parse(messages[i].timestamp).valueOf()
-                    })); // Отображение отправленных сообщений в чате
-                    addContextMenu(Date.parse(messages[i].timestamp).valueOf());
-                } else {
-                    $chatHistoryList.append(templateResponse({
-                        response: messages[i].text,
-                        time: getTime(messages[i].timestamp),
-                        userName: selectedUser.username,
-                        otheridentifier: Date.parse(messages[i].timestamp).valueOf()
-                    })); // Отображение полученных сообщений в чате
-                    addContextMenu(Date.parse(messages[i].timestamp).valueOf());
+        getJson("/getmessages?recipient=" + encodeURIComponent(recipient.id))
+            .then(function (messages) {
+                console.log(messages);
+
+                if (!Array.isArray(messages)) {
+                    console.error('Messages response is not an array:', messages);
+                    return;
                 }
-            }
-            scrollToBottom(); // Прокрутка до конца истории чата
-        })
+
+                for (let i = 0; i < messages.length; i++) {
+                    if (messages[i].user.username === principal.username) {
+                        $chatHistoryList.append(template({
+                            messageOutput: messages[i].text,
+                            time: getTime(messages[i].timestamp),
+                            messageId: messages[i].id
+                        }));
+                        addContextMenu(messages[i].id);
+                    } else {
+                        $chatHistoryList.append(templateResponse({
+                            response: messages[i].text,
+                            time: getTime(messages[i].timestamp),
+                            userName: selectedUser.username,
+                            messageId: messages[i].id
+                        }));
+                        addContextMenu(messages[i].id);
+                    }
+                }
+
+                updateChatNumMessages();
+                scrollToBottom();
+            })
+            .catch(function (error) {
+                console.error('Render messages failed:', error);
+            });
     }.bind(this), 200);
 
 }
 
 function sendMessage(message) {
-    let currenTime = new Date();
-    sendMsg(principal, message, currenTime); // Отправка сообщения
-    scrollToBottom(); // Прокрутка до конца истории чата
-    if (message.trim() !== '') {
-        let template = Handlebars.compile($("#message-template").html());
-        let context = {
-            messageOutput: message,
-            time: getTime(currenTime),
-            myidentifier: currenTime.getTime()
-        };
-
-        $chatHistoryList.append(template(context)); // Отображение отправленного сообщения в чате
-        addContextMenu(currenTime.valueOf());
-        scrollToBottom(); // Прокрутка до конца истории чата
-        $textarea.val(''); // Очистка текстового поля ввода сообщения
+    if (!selectedUser) {
+        return;
     }
+
+    if (!message || message.trim() === '') {
+        return;
+    }
+
+    let currentTime = new Date();
+
+    sendMsg(principal, message.trim(), currentTime)
+        .then(function (sent) {
+            if (!sent) {
+                return;
+            }
+
+            $textarea.val('');
+            scrollToBottom();
+        });
 }
 
 function updateMessage(val) {
-    $button.text('send');
-    const timestamp = messageContainer.find('[id]').attr('id');
-    const text = val;
+    const text = val ? val.trim() : '';
 
-    updateMsg(text, timestamp);
+    if (text === '') {
+        return;
+    }
 
-    $('#' + timestamp).text(text);
-    $textarea.val('');
+    const messageId = messageContainer.find('.message').data('message-id');
+
+    updateMsg(text, messageId)
+        .then(function () {
+            $('#message-' + messageId).text(text);
+
+            $button.text('Send');
+            $textarea.val('');
+            contextMenu.hide();
+        })
+        .catch(function (error) {
+            console.error('Update failed:', error);
+        });
 }
 
-function liveRender(message, userName, timestamp) {
-    scrollToBottom(); // Прокрутка до конца истории чата
-    // responses
-    let templateResponse = Handlebars.compile($("#message-response-template").html());
-    let contextResponse = {
-        response: message,
-        time: getTime(timestamp),
-        userName: userName,
-        otheridentifier: Date.parse(timestamp).valueOf()
-    };
+function liveRender(data) {
+    scrollToBottom();
+
+    const isOwnMessage = Number(data.user.id) === Number(principal.id);
+
+    const template = Handlebars.compile(
+        isOwnMessage
+            ? $("#message-template").html()
+            : $("#message-response-template").html()
+    );
+
+    const context = isOwnMessage
+        ? {
+            messageOutput: data.text,
+            time: getTime(data.timestamp),
+            messageId: data.id
+        }
+        : {
+            response: data.text,
+            time: getTime(data.timestamp),
+            userName: data.user.username,
+            messageId: data.id
+        };
 
     setTimeout(function () {
-        $chatHistoryList.append(templateResponse(contextResponse)); // Отображение полученного сообщения в чате
-        scrollToBottom(); // Прокрутка до конца истории чата
-        addContextMenu(new Date(timestamp).valueOf());
-    }.bind(this), 200);
+        $chatHistoryList.append(template(context));
+        addContextMenu(data.id);
+        updateChatNumMessages();
+        scrollToBottom();
+    }, 200);
 }
 
 function scrollToBottom() {

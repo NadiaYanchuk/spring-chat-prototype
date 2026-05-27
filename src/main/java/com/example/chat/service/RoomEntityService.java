@@ -35,8 +35,11 @@ public class RoomEntityService {
     }
 
     public RoomEntity insert(Long user1Id, Long user2Id) {
+        if (user1Id.equals(user2Id)) {
+            throw new IllegalArgumentException("Cannot create room with yourself");
+        }
 
-        RoomEntity room = roomDAO.findByUser1_IdAndUser2_Id(user1Id, user2Id);
+        RoomEntity room = roomDAO.findByUser1IdAndUser2IdOrUser2IdAndUser1Id(user1Id, user2Id);
 
         if (room != null) {
             return room;

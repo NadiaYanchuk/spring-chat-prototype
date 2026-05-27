@@ -2,7 +2,9 @@ package com.example.chat.controller;
 
 import com.example.chat.constants.WebSocketDestinations;
 import com.example.chat.dto.RoomDTO;
+import com.example.chat.entity.UserEntity;
 import com.example.chat.service.RoomEntityService;
+import com.example.chat.service.UserEntityService;
 import lombok.AllArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.ui.Model;
@@ -16,6 +18,7 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 public class RoomsController {
+    private final UserEntityService userService;
     private final RoomEntityService roomService;
 
     private final SimpMessagingTemplate simpMessagingTemplate;
@@ -26,10 +29,18 @@ public class RoomsController {
     }
 
     @GetMapping("/writetofound")
-    public RoomDTO writeToFoundUser(Model model, @RequestParam Long principalId, @RequestParam Long recipientId) {
+    public RoomDTO writeToFoundUser(Principal principal, @RequestParam Long recipientId) {
+        UserEntity currentUser = userService.findByUsername(principal.getName());
+
+        RoomDTO room = RoomDTO.getRoomDtoFromRoom(
+                roomService.insert(currentUser.getId(), recipientId)
+        );
+
         simpMessagingTemplate.convertAndSend(
                 WebSocketDestinations.NEW_DIALOG_TOPIC + recipientId,
-                principalId);
-        return RoomDTO.getRoomDtoFromRoom(roomService.insert(principalId, recipientId));
+                currentUser.getId()
+        );
+
+        return room;
     }
 }

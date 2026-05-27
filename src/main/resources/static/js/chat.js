@@ -12,46 +12,131 @@ let socket = new SockJS(url + '/chat'); // Создание нового WebSock
 // Функция для подключения к чату
 let pendingStatuses = {};
 
+let redirectingToLogin = false;
+
+function disconnectAndRedirectToLogin() {
+    if (redirectingToLogin) {
+        return;
+    }
+
+    redirectingToLogin = true;
+
+    try {
+        if (stompClient && stompClient.connected) {
+            stompClient.disconnect(function () {
+                window.location.href = '/login';
+            });
+            return;
+        }
+    } catch (e) {
+        console.error('Error disconnecting websocket:', e);
+    }
+
+    window.location.href = '/login';
+}
+
+function isAuthFailedResponse(response) {
+    return response.status === 401
+        || response.status === 403
+        || response.redirected
+        || response.url.includes('/login');
+}
+
+function getJson(path) {
+    return fetch(url + path, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+        .then(function (response) {
+            if (isAuthFailedResponse(response)) {
+                disconnectAndRedirectToLogin();
+                throw new Error('Not authenticated');
+            }
+
+            if (!response.ok) {
+                throw new Error('Request failed: ' + response.status);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!contentType.includes('application/json')) {
+                disconnectAndRedirectToLogin();
+                throw new Error('Expected JSON, got: ' + contentType);
+            }
+
+            return response.json();
+        });
+}
+
+function ensureAuthenticated() {
+    return getJson('/getprincipal')
+        .then(function (response) {
+            principal = response;
+            return true;
+        })
+        .catch(function (error) {
+            console.error('Authentication check failed:', error);
+            return false;
+        });
+}
+
 function connectToChat(principal) {
     console.log("connecting to chat...") // Вывод сообщения о попытке подключения к чату
     stompClient = Stomp.over(socket); // Создание объекта StompClient для управления соединением
-    stompClient.connect({ login: principal.username }, function (frame) {
+    stompClient.connect({}, function (frame) {
         console.log("connected to: " + frame); // Вывод сообщения об успешном подключении к чату
         stompClient.subscribe("/topic/messages/" + principal.id, function (response) {
-            let data = JSON.parse(response.body); // Разбор полученных данных в формате JSON
-            console.log("Data", data);
-            if (!selectedUser) {
-                incrementCounter(data.user.id);
-            } else {
-                if (selectedUser.username === data.user.username) {
-                    liveRender(data.text, data.user.username, data.timestamp); // Вызов функции для отображения полученного сообщения в чате
-                } else {
-                    incrementCounter(data.user.id);
-                }
+            const data = JSON.parse(response.body);
+
+            if (selectedUser && isMessageInSelectedChat(data)) {
+                liveRender(data);
+                return;
+            }
+
+            const partnerId = getMessagePartnerId(data);
+
+            if (partnerId && partnerId !== Number(principal.id)) {
+                incrementCounter(partnerId);
             }
         });
         stompClient.subscribe("/topic/newdialog/" + principal.id, function (r) {
-            console.log(r)
-            $.get(url + "/fetchuser?id=" + r.body, function (response) {
-                users.push(response);
-                appendUsers(response.id, response.username);
-            });
-        })
-        stompClient.subscribe('/topic/updatemessage/' + principal.id, function (r) {
-            console.log(r)
-            const data = JSON.parse(r.body);
-            console.log(selectedUser.id === Number(data.user.id))
-            if (selectedUser.id === Number(data.user.id)) {
-                $('#' + Date.parse(data.timestamp).valueOf()).text(data.text);
+            const userId = Number(r.body);
+
+            const existingUser = users
+                ? users.find(u => Number(u.id) === userId)
+                : null;
+
+            if (existingUser) {
+                refreshUserOnlineStatus(existingUser);
+                return;
             }
-        })
+
+            getJson('/fetchuser?id=' + encodeURIComponent(userId))
+                .then(function (response) {
+                    addUserToKnownList(response);
+                })
+                .catch(function (error) {
+                    console.error('Fetch new dialog user failed:', error);
+                });
+        });
+        stompClient.subscribe('/topic/updatemessage/' + principal.id, function (r) {
+            const data = JSON.parse(r.body);
+
+            if (selectedUser && isMessageInSelectedChat(data)) {
+                $('#message-' + data.id).text(data.text);
+            }
+        });
         stompClient.subscribe('/topic/deletemsg/' + principal.id, function (r) {
             const data = JSON.parse(r.body);
-            
-            if (!!$(`#${Date.parse(data.timestamp)}`)) {
-                $(`#${Date.parse(data.timestamp)}`).parent().remove();
+
+            if (selectedUser && isMessageInSelectedChat(data)) {
+                $('#message-' + data.id).closest('li').remove();
+                updateChatNumMessages();
             }
-            updateChatNumMessages();
         });
 
         // Онлайн-статусы от всех
@@ -69,6 +154,39 @@ function connectToChat(principal) {
             }
         });
     });
+}
+
+function getMessagePartnerId(message) {
+    if (!message || !message.room || !principal) {
+        return null;
+    }
+
+    const principalId = Number(principal.id);
+    const senderId = Number(message.user.id);
+    const user1Id = Number(message.room.user1.id);
+    const user2Id = Number(message.room.user2.id);
+
+    if (senderId !== principalId) {
+        return senderId;
+    }
+
+    return user1Id === principalId ? user2Id : user1Id;
+}
+
+function isMessageInSelectedChat(message) {
+    if (!selectedUser || !principal || !message.room) {
+        return false;
+    }
+
+    const principalId = Number(principal.id);
+    const selectedUserId = Number(selectedUser.id);
+    const user1Id = Number(message.room.user1.id);
+    const user2Id = Number(message.room.user2.id);
+
+    return (
+        (user1Id === principalId && user2Id === selectedUserId) ||
+        (user2Id === principalId && user1Id === selectedUserId)
+    );
 }
 
 // Обновляет иконку статуса, повторяет если элемент ещё не отрисован
@@ -109,132 +227,217 @@ function updateChatNumMessages() {
 
 // Функция для отправки сообщения
 function sendMsg(from, text, timestamp) {
-    const message = {
-        senderId: from.id,
-        recipientId: selectedUser.id,
-        text: text,
-        timestamp: timestamp
-    }
-    console.log('Message ', message);
-    stompClient.send("/app/chat/" + selectedUser.id, {}, JSON.stringify(message));
+    return ensureAuthenticated().then(function (authenticated) {
+        if (!authenticated) {
+            return false;
+        }
+
+        if (!stompClient || !stompClient.connected) {
+            disconnectAndRedirectToLogin();
+            return false;
+        }
+
+        const message = {
+            senderId: from.id,
+            recipientId: selectedUser.id,
+            text: text,
+            timestamp: timestamp
+        };
+
+        console.log('Message ', message);
+        stompClient.send("/app/chat/" + selectedUser.id, {}, JSON.stringify(message));
+
+        return true;
+    });
 }
 
-function updateMsg(text, timestamp) {
-    console.log('Message ', text);
-
+function updateMsg(text, messageId) {
     const message = {
-        recipient: selectedUser.id,
-        text: text,
+        text: text
     };
 
-    fetch('/updatemessage?timestamp=' + timestamp, {
+    return fetch('/updatemessage/' + messageId, {
         method: 'PUT',
+        credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(message),
     })
         .then(response => {
-            if (response.ok) {
-                console.log('Message updated successfully');
-            } else {
+            if (isAuthFailedResponse(response)) {
+                disconnectAndRedirectToLogin();
+                throw new Error('Not authenticated');
+            }
+
+            if (!response.ok) {
                 throw new Error('Error updating message');
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
+
+            console.log('Message updated successfully');
+            return true;
         });
 }
 
 // Функция для регистрации пользователя
 function registration() {
-    $.get(url + "/getprincipal", function (response) {
-        principal = response; // Получение имени текущего пользователя
+    getJson('/getprincipal')
+        .then(function (response) {
+            principal = response;
 
-        console.log('Principal -> ', principal)
+            console.log('Principal -> ', principal);
 
-        $('#userName').text(principal.username); // Отображение имени текущего пользователя
+            $('#userName').text(principal.username);
 
-        connectToChat(principal); // Подключение к чату с использованием имени текущего пользователя
+            socket = new SockJS(url + '/chat');
+            connectToChat(principal);
 
-        fetchKnown(); // Получение списка пользователей
-    });
+            fetchKnown();
+        })
+        .catch(function (error) {
+            console.error('Registration/auth check failed:', error);
+        });
 }
 
 // Функция для выбора пользователя для чата
 function selectUser(userId) {
-    console.log("selecting users: " + userId); // Вывод выбранного пользователя в консоль
-    console.log()
+    ensureAuthenticated().then(function (authenticated) {
+        if (!authenticated) {
+            return;
+        }
 
-    selectedUser = users.find(u => u.id === Number(userId)); // Установка выбранного пользователя
-    console.log('Selected user', selectedUser)
+        console.log("selecting users: " + userId);
 
-    // Сбрасываем счётчик новых сообщений для выбранного пользователя
-    let counter = document.getElementById("newMessage_" + selectedUser.id);
-    if (counter) {
-        counter.parentNode.removeChild(counter);
-    }
-    $('#selectedUserId').html('');
-    $('#selectedUserId').append('Chat with ' + selectedUser.username); // Отображение выбранного пользователя для чата
-    $('#chat-history').html('').removeClass('unselected'); // Очистка истории чата
-    $('.chat-message').show();
-    $('.chat-num-messages').text('');
+        selectedUser = users.find(u => Number(u.id) === Number(userId));
 
-    render(principal, selectedUser); // Отображение сообщений между текущим пользователем и выбранным пользователем
+        if (!selectedUser) {
+            console.error('Selected user was not found:', userId);
+            return;
+        }
+
+        console.log('Selected user', selectedUser);
+
+        let counter = document.getElementById("newMessage_" + selectedUser.id);
+        if (counter) {
+            counter.parentNode.removeChild(counter);
+        }
+
+        $('#selectedUserId').html('');
+        $('#selectedUserId').append('Chat with ' + selectedUser.username);
+        $('#chat-history').html('').removeClass('unselected');
+        $('.chat-message').show();
+        $('.chat-num-messages').text('');
+
+        render(principal, selectedUser);
+    });
 }
 
 let users; //массив объектов user (тех с которыми общаеся principal)
 
 // Функция для получения списка всех пользователей
 function fetchKnown() {
-    $.get(url + "/fetchknownusers", function (response) {
-        users = response; // Получение списка пользователей
-        console.log('Fetch', users)
-        $('#usersList').html(''); // Отображение списка пользователей
-        $('#selectedUserId').html('');
-        $('#chat-history').html('Chose someone to start chatting :)').addClass('unselected');
-        $('.chat-message').hide();
-        $('.chat-num-messages').text('');
+    getJson('/fetchknownusers')
+        .then(function (response) {
+            users = response;
 
-        selectedUser = null;
+            console.log('Fetch', users);
 
-        for (let i = 0; i < users.length; i++) {
-            appendUsers(users[i].id, users[i].username)
-        }
+            $('#usersList').html('');
+            $('#selectedUserId').html('');
+            $('#chat-history').html('Chose someone to start chatting :)').addClass('unselected');
+            $('.chat-message').hide();
+            $('.chat-num-messages').text('');
 
-        // Запрашиваем кто уже онлайн
-        $.get(url + "/getonlineusers", function (onlineUsernames) {
+            selectedUser = null;
+
             for (let i = 0; i < users.length; i++) {
-                if (onlineUsernames.includes(users[i].username)) {
-                    updateUserStatus(users[i].id, 'online');
-                }
+                appendUsers(users[i].id, users[i].username);
+                refreshUserOnlineStatus(users[i]);
             }
-});
 
-    }).done(function () {
-        $('#usersList').off('click', 'li').on('click', 'li', function (e) {
-            const current = document.getElementsByClassName("selected");
-            if (current.length > 0) {
-                current[0].classList.remove("selected");
-            }
-            this.classList.add("selected"); // Выделение выбранного пользователя в списке пользователей
+            $('#usersList').off('click', 'li').on('click', 'li', function () {
+                const current = document.getElementsByClassName("selected");
+
+                if (current.length > 0) {
+                    current[0].classList.remove("selected");
+                }
+
+                this.classList.add("selected");
+            });
+        })
+        .catch(function (error) {
+            console.error('Fetch known users failed:', error);
         });
-    });
 }
 
 function writeToUser(id) {
+    getJson('/writetofound?recipientId=' + encodeURIComponent(id))
+        .then(function (room) {
+            const user = getRoomPartner(room);
 
-    $.get(url + '/writetofound?principalId=' + principal.id + '&recipientId=' + id, function (response) {
-        let room = response;
-        console.log('Room', room)
+            addUserToKnownList(user);
 
-    })
-    console.log("write to user " + id)
-    console.log("write to user1 " + list.find(u => u.id === Number(id)).id)
-    let user = list.find(u => u.id === Number(id));
-    appendUsers(user.id, user.username)
-    users.push(list.find(u => u.id === Number(id)));
-    console.log('Pushed users', users)
+            $('#search-list-div').hide();
+            $('#userSearchInput').val('');
+
+            selectUser(user.id);
+        })
+        .catch(function (error) {
+            console.error('Error creating room:', error);
+        });
+}
+
+function getRoomPartner(room) {
+    if (Number(room.user1.id) === Number(principal.id)) {
+        return room.user2;
+    }
+
+    return room.user1;
+}
+
+function addUserToKnownList(user) {
+    if (!user) { return; }
+
+    if (!users) { users = []; }
+
+    const existingUser = users.find(function (knownUser) {
+        return Number(knownUser.id) === Number(user.id);
+    });
+
+    if (existingUser) {
+        refreshUserOnlineStatus(existingUser);
+        return;
+    }
+
+    users.push(user);
+    appendUsers(user.id, user.username);
+    refreshUserOnlineStatus(user);
+}
+
+function refreshUserOnlineStatus(user) {
+    if (!user) {
+        return;
+    }
+
+    const pendingStatus = pendingStatuses[user.username];
+
+    if (pendingStatus) {
+        updateUserStatus(user.id, pendingStatus);
+        delete pendingStatuses[user.username];
+        return;
+    }
+
+    getJson('/getonlineusers')
+        .then(function (onlineUsernames) {
+            if (onlineUsernames.includes(user.username)) {
+                updateUserStatus(user.id, 'online');
+            } else {
+                updateUserStatus(user.id, 'offline');
+            }
+        })
+        .catch(function (error) {
+            console.error('Refresh online status failed:', error);
+        });
 }
 
 function appendUsers(id, username) {

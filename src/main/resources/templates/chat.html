@@ -90,7 +90,7 @@
             <span class="message-data-time">{{time}}, Today</span> &nbsp; &nbsp;
             <span class="message-data-name">You</span> <i class="fa fa-circle me"></i>
         </div>
-        <div class="message other-message float-right" id="{{myidentifier}}">
+        <div class="message other-message float-right" id="message-{{messageId}}" data-message-id="{{messageId}}">
             {{messageOutput}}
         </div>
     </li>
@@ -102,7 +102,7 @@
             <span class="message-data-name"><i class="fa fa-circle online"></i> {{userName}}</span>
             <span class="message-data-time">{{time}}, Today</span>
         </div>
-        <div class="message my-message" id="{{otheridentifier}}">
+        <div class="message my-message" id="message-{{messageId}}" data-message-id="{{messageId}}">
             {{response}}
         </div>
     </li>
@@ -129,8 +129,13 @@
     let list;
     $(document).ready(function () {
         $(".log-out").click(function () {
-            window.location.href = "chat/logout";
-
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect(function () {
+                    window.location.href = "/chat/logout";
+                });
+            } else {
+                window.location.href = "/chat/logout";
+            }
         });
 
         $(document).on('click', function (e) {
@@ -147,72 +152,29 @@
             const searchTerm = $(this).val();
 
             if (searchTerm.length > 2) {
-                $.get(url + "/fetchallusers?searchTerm=" + searchTerm, function (response) {
-                    list = response;
-                }).done(function () {
-                    $('#search-list-div').show();
+                getJson("/fetchallusers?searchTerm=" + encodeURIComponent(searchTerm))
+                    .then(function (response) {
+                        list = response;
 
-                    let usersListTemplate = '';
+                        $('#search-list-div').show();
 
-                    for (let i = 0; i < list.length; i++) {
-                        usersListTemplate = usersListTemplate + '<a href="#" onclick="writeToUser(\'' + list[i].id + '\')"><li data-toggle="list">' + list[i].username + '</li></a>';
-                    }
+                        let usersListTemplate = '';
 
-                    $('#search-list').html(usersListTemplate);
-                });
+                        for (let i = 0; i < list.length; i++) {
+                            usersListTemplate = usersListTemplate
+                                + '<a href="#" onclick="writeToUser(\'' + list[i].id + '\')">'
+                                + '<li data-toggle="list">' + list[i].username + '</li>'
+                                + '</a>';
+                        }
+
+                        $('#search-list').html(usersListTemplate);
+                    })
+                    .catch(function (error) {
+                        console.error('Search users failed:', error);
+                    });
             } else {
                 $('#search-list-div').hide();
             }
-        });
-    });
-</script>
-<script>
-    $(document).ready(function () {
-        let contextMenu;
-        let messageContainer;
-
-        $('.message').on('contextmenu', function (e) {
-            e.preventDefault();
-
-            if (contextMenu) {
-                contextMenu.hide();
-            }
-
-            contextMenu = $('.context-menu');
-            const deleteButton = contextMenu.find('#delete-button');
-            const copyButton = contextMenu.find('#copy-button');
-            const editeButton = contextMenu.find('#edite-button');
-
-            messageContainer = $(this).closest('li');
-
-            deleteButton.on('click', function () {
-                messageContainer.remove();
-                contextMenu.hide();
-            });
-            copyButton.on('click', function () {
-                navigator.clipboard.writeText(messageContainer.context.innerText).catch(function(error) {
-                    console.error('Ошибка при копировании текста: ', error);
-                });
-            })
-
-            editeButton.on('click', function () {
-                const textArea = $('#message-to-send');
-                const saveBtn = $('#sendBtn');
-
-                textArea.text(messageContainer.context.innerText)
-                saveBtn.text('save');
-
-            })
-
-            let posX = e.pageX;
-            let posY = e.pageY;
-            contextMenu.css({top: posY, left: posX});
-
-            contextMenu.show();
-
-            $(document).on('click', function () {
-                contextMenu.hide();
-            });
         });
     });
 </script>

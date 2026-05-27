@@ -25,6 +25,10 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -34,10 +38,14 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+
         try {
             extractUsername(token);
             return true;
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }

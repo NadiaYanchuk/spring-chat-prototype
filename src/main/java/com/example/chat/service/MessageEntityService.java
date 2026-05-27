@@ -37,16 +37,11 @@ public class MessageEntityService {
     public List<MessageEntity> findMessagesByUsersId(Long currentUser, Long recipient) {
         return messageEntDao.findMessagesByUsersId(currentUser, recipient);
     }
-
-    public void deleteByTimestamp(Long time) {
-        messageEntDao.deleteByTimestamp(new Timestamp(time));
-    }
-
     public void delete(MessageEntity message) {
         messageEntDao.delete(message);
     }
 
-    public MessageEntity findByTimestamp(Long time) {
-        return messageEntDao.findByTimestamp(new Timestamp(time));
+    public MessageEntity findById(Long id) {
+        return messageEntDao.findById(id).orElse(null);
     }
 }

@@ -42,14 +42,4 @@ public interface MessageEntityRepository extends JpaRepository<MessageEntity, Lo
             "AND (m.user.id = :currentUser OR m.user.id = :recipient) " +
             "ORDER BY m.timestamp ASC")
     List<MessageEntity> findMessagesByUsersId(@Param("currentUser") Long currentUser, @Param("recipient") Long recipient);
-
-    void deleteByTimestamp(Timestamp timestamp);
-
-    @Query("SELECT m FROM MessageEntity m " +
-            "JOIN FETCH m.room r " +
-            "JOIN FETCH m.user " +
-            "JOIN FETCH r.user1 " +
-            "JOIN FETCH r.user2 " +
-            "WHERE m.timestamp = :timestamp")
-    MessageEntity findByTimestamp(@Param("timestamp") Timestamp timestamp);
 }

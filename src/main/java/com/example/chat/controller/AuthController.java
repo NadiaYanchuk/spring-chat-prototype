@@ -69,8 +69,14 @@ public class AuthController {
     }
 
     @GetMapping("/chat/logout")
-    public String logout() {
-        return "redirect:/logout";
+    public String logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("jwt", null);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
+        return "redirect:/login";
     }
 
     @GetMapping("/")
