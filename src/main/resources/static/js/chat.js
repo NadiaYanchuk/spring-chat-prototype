@@ -289,6 +289,10 @@ function registration() {
 
             $('#userName').text(principal.username);
 
+            if (principal.role === 'ADMIN') {
+               $('#adminBtn').show();
+            }
+
             socket = new SockJS(url + '/chat');
             connectToChat(principal);
 

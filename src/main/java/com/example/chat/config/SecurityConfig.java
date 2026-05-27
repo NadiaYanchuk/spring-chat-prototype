@@ -23,8 +23,10 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Collections;
+import java.time.LocalDateTime;
 
 @Configuration
 @EnableWebSecurity
@@ -64,6 +66,7 @@ public class SecurityConfig {
                                 "/favicon.ico",
                                 "/img/**"
                         ).permitAll()
+                        .requestMatchers("/admin", "/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
@@ -97,17 +100,20 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> {
-            UserEntity user = userDAO.findByUsername(username);
-            if (user == null) {
-                throw new org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: " + username);
-            }
-            return new User(user.getUsername(), user.getPassword(),
-                    Collections.singletonList(new SimpleGrantedAuthority("USER")));
-        };
-    }
+@Bean
+public UserDetailsService userDetailsService() {
+    return username -> {
+        UserEntity user = userDAO.findByUsername(username);
+        if (user == null || Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new UsernameNotFoundException("User not found: " + username);
+        }
+        if (user.getBannedUntil() != null && user.getBannedUntil().isAfter(LocalDateTime.now())) {
+           throw new UsernameNotFoundException("User is banned");
+        }
+        return new User(user.getUsername(), user.getPassword(),
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole())));
+    };
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {

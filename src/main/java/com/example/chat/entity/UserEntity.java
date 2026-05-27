@@ -46,6 +46,15 @@ public class UserEntity {
     @Column(name = "last_activity")
     private LocalDateTime lastActivity;
 
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(nullable = false)
+    private String role = "USER";
+
+    @Column(name = "banned_until")
+    private LocalDateTime bannedUntil;
+
     public UserEntity(String username, String password, String email) {
         this.username = username;
         this.password = password;

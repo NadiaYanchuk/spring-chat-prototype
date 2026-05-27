@@ -17,6 +17,17 @@ import org.springframework.stereotype.Component;
 public class DataLoader {
 
     @Bean
+    public UserEntity admin() {
+        UserEntity user = new UserEntity();
+        user.setUsername("admin");
+        user.setEmail("admin@mail.com");
+        user.setPassword("admin");
+        user.setRole("ADMIN");
+   
+        return user;
+    }
+
+    @Bean
     public UserEntity user1() {
         UserEntity user = new UserEntity();
         user.setUsername("n1kry");

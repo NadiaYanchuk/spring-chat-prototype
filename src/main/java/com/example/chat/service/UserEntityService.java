@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 @AllArgsConstructor
@@ -18,6 +19,8 @@ public class UserEntityService {
     private final UserEntityRepository userDao;
 
     private final PasswordEncoder passwordEncoder;
+
+    private final TokenBlacklistService tokenBlacklistService;
 
     public void addUser(final UserEntity user) {
         log.info("Adding new user: {}", user.getUsername());
@@ -64,5 +67,54 @@ public class UserEntityService {
 
     public boolean ifExistById(Long id) {
         return userDao.existsById(id);
+    }
+
+    public List<UserDTO> findAllUsers() {
+    return userDao.findAll().stream()
+        .map(UserDTO::getUserDtoFromUser)
+        .toList();
+    }
+
+    public void softDeleteUser(Long id) {
+        UserEntity user = findById(id);
+        if ("ADMIN".equals(user.getRole())) {
+           throw new IllegalArgumentException("Cannot delete admin");
+        }
+        user.setIsDeleted(true);
+        userDao.save(user);
+        tokenBlacklistService.blacklist(user.getUsername());
+    }
+
+    public void restoreUser(Long id) {
+        UserEntity user = findById(id);
+        user.setIsDeleted(false);
+        tokenBlacklistService.remove(user.getUsername()); // убрать из блеклиста
+        userDao.save(user);
+    }
+
+    public void changeRole(Long id, String role) {
+        if (!role.equals("USER") && !role.equals("ADMIN")) {
+           throw new IllegalArgumentException("Invalid role: " + role);
+        }
+        UserEntity user = findById(id);
+        user.setRole(role);
+        userDao.save(user);
+    }
+
+    public void banUser(Long id, int hours) {
+        UserEntity user = findById(id);
+        if ("ADMIN".equals(user.getRole())) {
+            throw new IllegalArgumentException("Cannot ban admin");
+        }
+        user.setBannedUntil(LocalDateTime.now().plusHours(hours));
+        tokenBlacklistService.blacklist(user.getUsername());
+        userDao.save(user);
+    }
+
+    public void unbanUser(Long id) {
+        UserEntity user = findById(id);
+        user.setBannedUntil(null);
+        tokenBlacklistService.remove(user.getUsername());
+        userDao.save(user);
     }
 }

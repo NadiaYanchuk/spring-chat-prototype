@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DatabaseInitializer implements ApplicationListener<ContextRefreshedEvent> {
 
+    private final UserEntity admin;
     private final UserEntity user1;
     private final UserEntity user2;
     private final UserEntity user3;
@@ -36,6 +37,8 @@ public class DatabaseInitializer implements ApplicationListener<ContextRefreshed
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
+        service.addUser(admin);
+
         service.addUser(user1);
         service.addUser(user2);
         service.addUser(user3);

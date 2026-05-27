@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-
+import com.example.chat.service.TokenBlacklistService;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -23,6 +23,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
 protected void doFilterInternal(HttpServletRequest request,
@@ -35,6 +36,16 @@ protected void doFilterInternal(HttpServletRequest request,
                 && jwtService.isTokenValid(token)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
         String username = jwtService.extractUsername(token);
+
+        if (tokenBlacklistService.isBlacklisted(username)) {
+            Cookie cookie = new Cookie("jwt", null);
+            cookie.setHttpOnly(true);
+            cookie.setMaxAge(0);
+            cookie.setPath("/");
+            response.addCookie(cookie);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
